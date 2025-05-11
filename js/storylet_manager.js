@@ -10,7 +10,7 @@ const StoryletManager = (() => {
     function init(player, world) {
         currentPlayerRef = player;
         currentWorldRef = world;
-        console.log("StoryletManager (v2 Awakening - Full Corrected) initialized.");
+        console.log("StoryletManager (v2 Awakening - FULL CODE v3) initialized.");
     }
 
     function startStorylet(storyletId) {
@@ -44,7 +44,6 @@ const StoryletManager = (() => {
             if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) { 
                 UIManager.addLogEntry(`Storylet Engaged: ${activeStoryletInstance.title}`, "story");
             }
-            // Game module will call UIManager.displayStorylet AFTER switching view
             return activeStoryletInstance; 
         } else {
             if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
@@ -79,8 +78,17 @@ const StoryletManager = (() => {
     }
 
     function endStorylet(logMessage = "The moment passes into memory.") {
-        if (activeStoryletData && UIManager && UIManager.addLogEntry) { UIManager.addLogEntry(logMessage, "system"); }
-        activeStoryletData = null; activeStoryletInstance = null;
+        if (activeStoryletData) { 
+            const currentNode = currentWorldRef.getCurrentNode();
+            if (currentNode && currentNode.storyletOnArrival === activeStoryletData.id && !currentNode.arrivalStoryletCompleted) {
+                currentWorldRef.markArrivalStoryletCompleted(currentNode.id);
+            }
+            if (UIManager && UIManager.addLogEntry) { 
+                UIManager.addLogEntry(logMessage, "system"); 
+            }
+        }
+        activeStoryletData = null; 
+        activeStoryletInstance = null;
         if (Game && Game.storyletEnded) Game.storyletEnded();
     }
 

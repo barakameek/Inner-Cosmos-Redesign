@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sunless Psyche: The Labyrinth Within (Conceptual Prototype)</title>
+    <title>Sunless Psyche: The Labyrinth Within (Node Map Prototype)</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,8 +12,8 @@
         <!-- Header / Meta Information Area -->
         <header id="game-header">
             <h1>Sunless Psyche</h1>
-            <div id="psychonaut-name-display">Psychonaut: <span class="value">The Wanderer</span></div>
-            <div id="current-ambition-display">Ambition: <span class="value">To Find Stillness</span></div>
+            <div id="psychonaut-name-display">Psychonaut: <span class="value">The Awakened</span></div>
+            <div id="current-ambition-display">Ambition: <span class="value">To Grasp What Was Lost</span></div>
         </header>
 
         <!-- Main Game Area -->
@@ -27,35 +27,35 @@
                     <div class="bar-container">
                         <div id="player-integrity-bar" class="bar integrity"></div>
                     </div>
-                    <span id="player-integrity-value" class="value">100/100</span>
+                    <span id="player-integrity-value" class="value">10/100</span> <!-- Updated for intro -->
                 </div>
                 <div class="stat-block">
                     <label>Focus:</label>
                     <div class="bar-container">
                         <div id="player-focus-bar" class="bar focus"></div>
                     </div>
-                    <span id="player-focus-value" class="value">5/5</span>
+                    <span id="player-focus-value" class="value">1/5</span> <!-- Updated for intro -->
                 </div>
                 <div class="stat-block">
                     <label>Clarity:</label>
                     <div class="bar-container">
                         <div id="player-clarity-bar" class="bar clarity"></div>
                     </div>
-                    <span id="player-clarity-value" class="value">10/10</span>
+                    <span id="player-clarity-value" class="value">1/20</span> <!-- Updated for intro -->
                 </div>
                 <div class="stat-block">
                     <label>Hope:</label>
                     <div class="bar-container">
                         <div id="player-hope-bar" class="bar hope"></div>
                     </div>
-                    <span id="player-hope-value" class="value">5/10</span>
+                    <span id="player-hope-value" class="value">0/10</span> <!-- Updated for intro -->
                 </div>
                 <div class="stat-block">
                     <label>Despair:</label>
                     <div class="bar-container">
                         <div id="player-despair-bar" class="bar despair"></div>
                     </div>
-                    <span id="player-despair-value" class="value">1/10</span>
+                    <span id="player-despair-value" class="value">7/10</span> <!-- Updated for intro -->
                 </div>
 
                 <div id="attunements-display">
@@ -74,31 +74,39 @@
                 <div id="memories-display">
                     <h3>Active Memories (Artifacts)</h3>
                     <ul id="active-memories-list">
-                        <!-- Memories will be populated by JS -->
-                        <li><span class="placeholder">No active memories</span></li>
+                        <li><span class="placeholder">No memories stir...</span></li>
                     </ul>
                 </div>
             </aside>
 
             <!-- Center Panel: World Map / Location / Storylet / Encounter -->
             <section id="world-interaction-panel">
-                <div id="map-view" class="view-active">
-                    <h2>The Inner Sea</h2>
-                    <div id="map-display-area">
-                        <!-- Placeholder for map rendering or textual description -->
-                        <p>A vast, dark ocean of consciousness stretches before you...</p>
-                        <p>Current Region: <span id="current-region-name" class="value">The Shallows of Awakening</span></p>
+                <!-- PRE-GAME INTRO SCREEN -->
+                <div id="pre-game-intro-view" class="view-active"> <!-- Start with this view active -->
+                    <h2 id="pre-game-title">The Precipice</h2>
+                    <div id="pre-game-text-area">
+                        <p class="intro-line">The edges fray.</p>
+                        <!-- More lines will be added by JS -->
                     </div>
-                    <div id="navigation-controls">
-                        <h3>Navigate:</h3>
-                        <button data-direction="north">North</button>
-                        <button data-direction="east">East</button>
-                        <button data-direction="south">South</button>
-                        <button data-direction="west">West</button>
-                        <button data-action="interact-location">Explore Current Location</button>
+                    <button id="continue-from-precipice" class="view-hidden">Grasp for Awareness...</button>
+                </div>
+
+
+                <div id="map-view" class="view-hidden"> <!-- Was view-active, now hidden initially -->
+                    <h2>The Inner Sea - <span id="current-node-map-name" class="value">The Shattered Shore</span></h2>
+                    <div id="node-map-container">
+                        <!-- Node-based map will be rendered here by JS -->
+                        <p class="placeholder">Visualizing connections...</p>
+                    </div>
+                    <div id="map-node-info">
+                         <p>Current Location: <strong id="current-node-name-display">The Shattered Shore</strong></p>
+                         <p id="current-node-description-display">A desolate, rocky outcrop...</p>
+                         <button id="explore-current-node-button">Explore This Place</button>
                     </div>
                 </div>
 
+                <!-- Location View is less prominent with node map, exploration triggers storylets/encounters directly -->
+                <!-- It might be used for Sanctuaries or complex "ports" -->
                 <div id="location-view" class="view-hidden">
                     <h2 id="location-name">Location Name</h2>
                     <div id="location-description">
@@ -106,10 +114,9 @@
                     </div>
                     <div id="location-actions">
                         <h3>Actions:</h3>
-                        <!-- Location specific actions will be populated by JS -->
-                        <button data-action="rest">Rest (Restore Integrity/Hope)</button>
-                        <button data-action="shop">Visit Emporium of Thought</button>
-                        <button data-action="leave-location">Leave Location</button>
+                        <button data-action="rest">Rest</button>
+                        <button data-action="shop">Emporium</button>
+                        <button id="return-to-map-from-location">Return to Navigation</button>
                     </div>
                 </div>
 
@@ -120,27 +127,30 @@
                     </div>
                     <div id="storylet-choices">
                         <h3>Choices:</h3>
-                        <!-- Choices will be populated by JS -->
-                        <button data-choice-id="1">Choice 1</button>
-                        <button data-choice-id="2">Choice 2</button>
+                        <button data-choice-index="0">Choice 1</button>
+                        <button data-choice-index="1">Choice 2</button>
                     </div>
                 </div>
 
                 <div id="encounter-view" class="view-hidden">
-                    <!-- This will be similar to the previous prototype's encounter UI -->
                     <h2>Encounter: <span id="aspect-name-encounter">Aspect Name</span></h2>
-                    <div id="aspect-encounter-status">
-                        <div>Resolve: <span id="aspect-resolve-encounter" class="value">X/Y</span></div>
-                        <div>Composure: <span id="aspect-composure-encounter" class="value">X</span></div>
-                        <div>Resonance: <span id="aspect-resonance-encounter" class="value">X/Y</span></div>
-                        <div>Dissonance: <span id="aspect-dissonance-encounter" class="value">X/Y</span></div>
-                        <div>Intent: <span id="aspect-intent-encounter" class="value">Aspect plans to...</span></div>
-                        <div>Traits: <ul id="aspect-traits-encounter"></ul></div>
-                    </div>
-                    <div id="player-encounter-status">
-                        <div>Your Focus: <span id="player-focus-encounter" class="value">X/Y</span></div>
-                        <div>Your Integrity: <span id="player-integrity-encounter" class="value">X/Y</span></div>
-                        <div>Active Stance: <span id="player-stance-encounter" class="value">Observer</span></div>
+                    <div class="encounter-columns">
+                        <div class="encounter-aspect-info">
+                            <h3>Aspect Details</h3>
+                            <div>Resolve: <span id="aspect-resolve-encounter" class="value">X/Y</span></div>
+                            <div>Composure: <span id="aspect-composure-encounter" class="value">X</span></div>
+                            <div>Resonance: <span id="aspect-resonance-encounter" class="value">X/Y</span></div>
+                            <div>Dissonance: <span id="aspect-dissonance-encounter" class="value">X/Y</span></div>
+                            <div>Intent: <span id="aspect-intent-encounter" class="value">Aspect plans to...</span></div>
+                            <div>Traits: <ul id="aspect-traits-encounter"></ul></div>
+                        </div>
+                        <div class="encounter-player-info">
+                            <h3>Your Status</h3>
+                            <div>Focus: <span id="player-focus-encounter" class="value">X/Y</span></div>
+                            <div>Integrity: <span id="player-integrity-encounter" class="value">X/Y</span></div>
+                            <div>Active Stance: <span id="player-stance-encounter" class="value">None</span></div>
+                            <div>Player Composure: <span id="player-composure-encounter" class="value">0</span></div>
+                        </div>
                     </div>
                     <div id="player-hand-encounter">
                         <h3>Hand (Concepts):</h3>
@@ -150,7 +160,7 @@
                     </div>
                     <div id="encounter-controls">
                         <button id="end-turn-encounter">End Turn</button>
-                        <button id="reveal-trait-encounter" title="Spend Insight to reveal a hidden Trait">Reveal Trait</button>
+                        <button id="reveal-trait-encounter" title="Spend 1 Insight to reveal a hidden Trait">Reveal Trait (1 Insight)</button>
                     </div>
                 </div>
 
@@ -160,25 +170,23 @@
             <aside id="context-panel">
                 <div id="deck-info-display">
                     <h3>Deck of Concepts</h3>
-                    <p>Concepts in Deck: <span id="deck-count-display" class="value">0</span></p>
-                    <p>Concepts in Discard: <span id="discard-count-display" class="value">0</span></p>
-                    <p>Traumas (Dissonance): <span id="trauma-count-display" class="value">0</span></p>
+                    <p>In Deck: <span id="deck-count-display" class="value">0</span></p>
+                    <p>In Discard: <span id="discard-count-display" class="value">0</span></p>
+                    <p>Traumas: <span id="trauma-count-display" class="value">0</span></p>
                     <button id="view-deck-button">View Full Deck</button>
                 </div>
 
                 <div id="message-log-display">
                     <h3>Event Log</h3>
                     <div id="log-entries">
-                        <p class="log-entry system">Game Initialized. Welcome, Psychonaut.</p>
-                        <!-- Log entries will be populated by JS -->
+                        <p class="log-entry system">Awaiting consciousness...</p>
                     </div>
                 </div>
 
                 <div id="journal-display">
                     <h3>Psychonaut's Journal</h3>
                     <div id="journal-entries">
-                        <p class="journal-entry"><span class="entry-title">First Entry:</span> The Inner Sea beckons...</p>
-                        <!-- Journal entries will be populated by JS -->
+                        <p class="journal-entry placeholder">The pages are blank, aching for input...</p>
                     </div>
                     <button id="add-journal-entry-button">Add Personal Note</button>
                 </div>
@@ -188,8 +196,8 @@
 
         <!-- Footer / Meta Controls -->
         <footer id="game-footer">
-            <button id="game-menu-button">Game Menu (Save/Load/Options)</button>
-            <span id="game-version">Sunless Psyche v0.0.1 (Conceptual)</span>
+            <button id="game-menu-button">Game Menu</button>
+            <span id="game-version">Sunless Psyche v0.1.0 (Awakening Prototype)</span>
         </footer>
 
         <!-- Modals / Pop-ups (Initially Hidden) -->
@@ -214,15 +222,14 @@
     </div> <!-- End #game-wrapper -->
 
     <!-- JavaScript Files -->
-    <!-- Order will matter here for dependencies if not using ES6 modules properly -->
     <script src="js/config.js"></script>
     <script src="js/ui_manager.js"></script>
     <script src="js/player.js"></script>
     <script src="js/world.js"></script>
     <script src="js/storylet_manager.js"></script>
-    <script src="js/concept_cards.js"></script> <!-- Or part of config/game_data -->
+    <!-- concept_cards.js could be merged into config or encounter_manager for effects -->
     <script src="js/encounter_manager.js"></script>
-    <script src="js/main.js"></script> <!-- Main should usually be last -->
+    <script src="js/main.js"></script>
 
 </body>
 </html>

@@ -1,141 +1,126 @@
-// js/storylet_manager.js
+// js/encounter_manager.js
 
-const StoryletManager = (() => {
+const EncounterManager = (() => { // CORRECTED: This declares EncounterManager
 
-    let activeStoryletData = null;
-    let activeStoryletInstance = null; 
+    let isActive = false;
     let currentPlayerRef = null;
-    let currentWorldRef = null;
+    let currentAspect = null; 
 
-    function init(player, world) {
-        currentPlayerRef = player;
-        currentWorldRef = world;
-        console.log("StoryletManager (v2 Awakening - Full Corrected) initialized.");
-    }
-
-    function startStorylet(storyletId) {
-        const storyletDef = STORYLET_DATA_MINIMAL[storyletId]; 
-        if (storyletDef) {
-            activeStoryletData = { ...storyletDef };
-            activeStoryletInstance = { 
-                id: storyletDef.id,
-                title: storyletDef.title,
-                text: storyletDef.text,
-                choices: [] 
-            };
-
-            if (storyletDef.choices && Array.isArray(storyletDef.choices)) {
-                activeStoryletInstance.choices = storyletDef.choices.map(choiceDef => {
-                    const choiceInstance = { ...choiceDef };
-                    choiceInstance.disabled = false;
-                    choiceInstance.disabledReason = "";
-                    if (choiceDef.conditionFunctionName && typeof storyletConditions[choiceDef.conditionFunctionName] === 'function') {
-                        if (!storyletConditions[choiceDef.conditionFunctionName](choiceDef.conditionParams || {})) {
-                            choiceInstance.disabled = true;
-                            choiceInstance.disabledReason = choiceDef.conditionDisabledReason || "You cannot choose this option presently.";
-                        }
-                    } else if (choiceDef.conditionFunctionName) {
-                        console.warn(`Condition function "${choiceDef.conditionFunctionName}" not found for storylet "${storyletId}", choice "${choiceDef.text}". Choice enabled by default.`);
-                    }
-                    return choiceInstance;
-                });
-            }
-
-            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) { 
-                UIManager.addLogEntry(`Storylet Engaged: ${activeStoryletInstance.title}`, "story");
-            }
-            // Game module will call UIManager.displayStorylet AFTER switching view
-            return activeStoryletInstance; 
-        } else {
-            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
-                UIManager.addLogEntry(`Error: Storylet ID "${storyletId}" not found.`, "error");
-            }
-            console.error(`Storylet ID "${storyletId}" not found.`);
-            activeStoryletData = null; activeStoryletInstance = null;
-            if (typeof Game !== 'undefined' && Game.storyletEnded) Game.storyletEnded(); 
-            return null; 
-        }
-    }
-
-    function makeChoice(choiceIndex) {
-        if (!activeStoryletInstance || !activeStoryletInstance.choices || choiceIndex < 0 || choiceIndex >= activeStoryletInstance.choices.length) {
-            if(UIManager) UIManager.addLogEntry("Invalid storylet choice made.", "error"); return;
-        }
-        const chosenOption = activeStoryletInstance.choices[choiceIndex];
-        if (chosenOption.disabled) {
-            if(UIManager) UIManager.addLogEntry(`Cannot select disabled choice: "${chosenOption.text}" (Reason: ${chosenOption.disabledReason})`, "warning"); return;
-        }
-        if(UIManager) UIManager.addLogEntry(`Chose: "${chosenOption.text}"`, "choice");
-        
-        console.log("Player hand JUST BEFORE outcome function is called in StoryletManager.makeChoice:", JSON.stringify(currentPlayerRef.hand));
-
-        if (chosenOption.outcomeFunctionName && typeof storyletOutcomes[chosenOption.outcomeFunctionName] === 'function') {
-            storyletOutcomes[chosenOption.outcomeFunctionName](chosenOption.params || {});
-        } else {
-            if(UIManager) UIManager.addLogEntry(`Outcome function "${chosenOption.outcomeFunctionName}" not implemented for "${chosenOption.text}". Storylet ends.`, "error");
-            console.warn(`Outcome function "${chosenOption.outcomeFunctionName}" not implemented.`);
-            endStorylet();
-        }
-    }
-
-    function endStorylet(logMessage = "The moment passes into memory.") {
-        if (activeStoryletData && UIManager && UIManager.addLogEntry) { UIManager.addLogEntry(logMessage, "system"); }
-        activeStoryletData = null; activeStoryletInstance = null;
-        if (Game && Game.storyletEnded) Game.storyletEnded();
-    }
-
-    const storyletConditions = {
-        conditionHasFocus1: (params) => currentPlayerRef && currentPlayerRef.focus >= 1,
-        conditionPlayerWounded: (params) => currentPlayerRef && (currentPlayerRef.integrity < (currentPlayerRef.maxIntegrity * 0.5)),
-        conditionHasMemory: (params) => currentPlayerRef && params.memoryId && currentPlayerRef.hasMemory(params.memoryId),
-        conditionHasCardInHand: (params) => currentPlayerRef && params.cardId && currentPlayerRef.hand.includes(params.cardId),
-        conditionPlayerNotAtMaxIntegrity: (params) => currentPlayerRef && currentPlayerRef.integrity < currentPlayerRef.maxIntegrity,
+    let playerEncounterState = {
+        composure: 0,
+        disorientationClaritySpentThisTurn: false,
     };
 
-    const storyletOutcomes = {
-        outcomePlayGraspForAwarenessShore: (params) => {
-            const graspCardId = "AWK001";
-            console.log("Player hand at VERY START of outcomePlayGraspForAwarenessShore:", JSON.stringify(currentPlayerRef.hand));
-            if (currentPlayerRef.hand.includes(graspCardId)) {
-                const cardDef = CONCEPT_CARD_DEFINITIONS[graspCardId]; 
-                const playedCardDef = currentPlayerRef.playCardFromHand(graspCardId); 
-                if (playedCardDef) { 
-                    if(UIManager) UIManager.addLogEntry(`You instinctively ${playedCardDef.name.toLowerCase()}.`, "player_action_major");
-                    const graspEffectFn = (typeof EncounterManager !== 'undefined') ? EncounterManager.getConceptCardEffectFunction(playedCardDef.effectFunctionName) : null;
-                    if (graspEffectFn) { graspEffectFn(playedCardDef); } 
-                    else { console.error("Effect for Grasp for Awareness not found."); if(UIManager) UIManager.addLogEntry("The impulse yields confusion.", "system_negative");}
-                    if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI();
-                    endStorylet("A sliver of awareness cuts the fog. The world sharpens slightly.");
-                } else { 
-                    if(UIManager) UIManager.addLogEntry("Could not manifest 'Grasp for Awareness' (playCardFromHand failed).", "error");
-                    console.error("playCardFromHand failed for AWK001. Hand:", JSON.stringify(currentPlayerRef.hand));
-                    endStorylet("The fog remains thick."); 
-                }
-            } else { 
-                if(UIManager) UIManager.addLogEntry("'Grasp for Awareness' is missing from hand at outcome processing.", "error"); 
-                console.error("CRITICAL: AWK001 not in hand during outcome. Hand:", JSON.stringify(currentPlayerRef.hand));
-                endStorylet("Adrift in confusion."); 
-            }
-        },
-        outcomeSiftWreckage: (params) => { if (!currentPlayerRef.spendFocusForCard(1, "sifting wreckage")) { endStorylet("Lacking focus, the debris remains a jumble."); return; } currentPlayerRef.addMemory("MEM_TARNISHED_LOCKET"); currentPlayerRef.modifyHope(1, "finding the locket"); if(UIManager) UIManager.addJournalEntry("A Glimmer of the Past", "Amidst shattered thoughts, I found a Tarnished Locket. It feels... important."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("You find a small, tarnished locket in the debris."); },
-        outcomeListenWhisperWreckage: (params) => { if(UIManager) UIManager.addLogEntry("The whisper intensifies, 'YOU SHOULD NOT BE HERE!' A shard of doubt takes form!", "critical"); if(Game && Game.queueEncounter) Game.queueEncounter("ASP_LINGERING_DOUBT"); endStorylet("The whispers coalesce into a menacing presence."); },
-        outcomeLeaveWreckage: (params) => { currentPlayerRef.modifyDespair(1, "fleeing the wreckage"); if(UIManager) UIManager.addJournalEntry("Unease", "The Wreckage of a Thought felt deeply unsettling. I chose not to linger."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("You back away from the unsettling wreckage."); },
-        outcomeTouchFungusEmpathy: (params) => { currentPlayerRef.addConceptToDeck("CON001", true); if(UIManager) UIManager.addLogEntry("You receive a 'Glimmering Tear-Drop' (conceptual resource).", "reward"); if(UIManager) UIManager.addJournalEntry("The Sorrowful Bloom", "The fungus resonated, sharing sadness, a vision of a burning library, and 'Shared Sorrow'."); currentPlayerRef.modifyAttunement("psychological", 1, "empathizing with fungus"); currentPlayerRef.modifyHope(1, "connection"); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("A wave of shared sorrow leaves an echo of understanding."); },
-        outcomeObserveFungusCognitive: (params) => { currentPlayerRef.addConceptToDeck("CON002", true); if(UIManager) UIManager.addJournalEntry("Calculated Distance", "Observing the fungus revealed patterns, granting 'Detached Observation'."); currentPlayerRef.modifyAttunement("cognitive", 1, "analyzing fungus"); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("From a distance, you analyze the fungus, gaining perspective."); },
-        outcomeHarvestFungus: (params) => { if(UIManager) UIManager.addLogEntry("You gain 'Bioluminescent Tear-Drop Cluster' (resource). Its light is cold.", "reward"); currentPlayerRef.modifyDespair(1, "harvesting fungus"); currentPlayerRef.modifyAttunement("interaction", 1, "decisive action"); if(UIManager) UIManager.addJournalEntry("A Cold Harvest", "I took the fungus. Its light died. A violation lingers."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("You pluck the fungus. Its light extinguishes."); },
-        outcomeKeeperExplainInnerSea: (params) => { if(UIManager) UIManager.addLogEntry("Keeper: 'This is the Inner Sea, dream-tides where all thoughts flow. Few surface with as much... self... as you. A bleak fortune.'", "dialogue"); currentPlayerRef.modifyInsight(1, "Keeper's explanation"); if(UIManager) UIManager.addJournalEntry("The Inner Sea", "The Keeper confirms this is the 'Inner Sea,' confluence of consciousness."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("The Keeper's words offer terrifying clarity."); },
-        outcomeKeeperExplainReturn: (params) => { if(UIManager) UIManager.addLogEntry("Keeper: 'Return? To the shore you knew? That path is erased. To 'leave' now means forging a new anchor, a new shore. Or being claimed. Your Ambition, Psychonaut, will light your way... or be your undoing.'", "dialogue"); if(UIManager) UIManager.addJournalEntry("No Easy Return", "The Keeper speaks of forging a new self. Return is not simple."); endStorylet("The concept of 'return' seems distant."); },
-        outcomeKeeperOfferRest: (params) => { if(UIManager) UIManager.addLogEntry("Keeper: 'The tattered edges of your mind are plain. Rest here. Let the Sanctum's calm soothe what it can.'", "dialogue"); const integrityToHeal = Math.min(20, currentPlayerRef.maxIntegrity - currentPlayerRef.integrity); if(integrityToHeal > 0) currentPlayerRef.modifyIntegrity(integrityToHeal, "Keeper's solace"); currentPlayerRef.modifyHope(1, "Sanctuary's peace"); currentPlayerRef.modifyDespair(-1, "Sanctuary's peace"); if(UIManager) UIManager.addJournalEntry("A Moment's Peace", "The Keeper allowed me to rest. The weight lessened."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("A fragile peace settles as you accept the Keeper's offer."); },
-        outcomeKeeperAddressAmbition: (params) => { if(UIManager) UIManager.addLogEntry(`Keeper: 'Your Ambition: "${currentPlayerRef.ambition}". Many threads drift. One pulls you towards the 'Archives of Regret'. Seek it. But understanding has a cost.'`, "dialogue_important"); if(currentWorldRef) currentWorldRef.revealNodeConnection("NODE_THRESHOLD_SANCTUM", "NODE_ARCHIVES_OF_REGRET_ENTRANCE"); if(UIManager) UIManager.addJournalEntry("A Faint Trail", "The Keeper spoke of the 'Archives of Regret'. A path opened."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("The Keeper's words point towards a destination."); },
-        outcomeKeeperSurvivalTips: (params) => { if(UIManager) UIManager.addLogEntry("Keeper: 'Conserve Clarity, your light. Hoard Hope, your raft. Understand Concepts, your will. Listen... to the Sea.'", "dialogue"); endStorylet("The advice is cryptic, yet resonant."); },
-        outcomeKeeperExplainConcepts: (params) => { if(UIManager) UIManager.addLogEntry("Keeper: 'Concepts are shaped thoughts. Expressions, techniques, insights. The more you understand, the more potent they become.'", "dialogue"); currentPlayerRef.modifyInsight(1, "learning about Concepts"); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("You gain deeper appreciation for your mental tools."); },
-        outcomeEndConversationWithKeeper: (params) => { endStorylet("You nod to the Keeper, the conversation ended for now."); },
-        outcomePlayFragmentedMemoryTheFall: (params) => { const cardId = "AWK002"; if (currentPlayerRef.hand.includes(cardId)) { const cardDef = CONCEPT_CARD_DEFINITIONS[cardId]; if (currentPlayerRef.spendFocusForCard(cardDef.cost, cardDef.name)) { currentPlayerRef.playCardFromHand(cardId); if(UIManager) UIManager.addLogEntry(`Played ${cardDef.name}.`, "player_action_major"); const effectFn = (typeof EncounterManager !== 'undefined') ? EncounterManager.getConceptCardEffectFunction(cardDef.effectFunctionName) : null; if (effectFn) { effectFn(cardDef); } else { console.error("Effect for Fragmented Memory: The Fall not found."); } if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("The vision, though painful, brings clarity and reveals paths."); } else { if(UIManager) UIManager.addLogEntry(`Not enough Focus to process ${cardDef.name}.`, "warning"); endStorylet("The memory is too jarring to process fully now."); } } else { if(UIManager) UIManager.addLogEntry("'Fragmented Memory: The Fall' is not in your grasp.", "warning"); endStorylet(); } }
+    let viewToReturnToAfterEncounter = 'map-view'; 
+
+    function init(player) {
+        currentPlayerRef = player;
+        console.log("EncounterManager (v2 Awakening - Full Corrected) initialized.");
+    }
+
+    function startEncounter(aspectId, previousViewId = 'map-view') {
+        const aspectTemplate = ASPECT_TEMPLATES[aspectId]; 
+        if (!aspectTemplate) {
+            if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Aspect template ID "${aspectId}" not found.`, "error");
+            if(typeof Game !== 'undefined' && Game.returnFromEncounter) Game.returnFromEncounter(previousViewId); 
+            return false;
+        }
+        isActive = true;
+        viewToReturnToAfterEncounter = previousViewId;
+
+        currentAspect = {
+            id: aspectTemplate.id,
+            name: aspectTemplate.name,
+            resolve: aspectTemplate.baseResolve,
+            maxResolve: aspectTemplate.baseResolve,
+            composure: aspectTemplate.baseComposure,
+            maxComposureCap: aspectTemplate.baseComposure + Math.ceil(aspectTemplate.baseResolve * 0.75) || 20,
+            resonance: 0,
+            resonanceGoal: aspectTemplate.resonanceGoal,
+            dissonance: 0,
+            dissonanceThreshold: aspectTemplate.dissonanceThreshold,
+            dissonanceTriggeredThisThreshold: false,
+            visibleTraits: JSON.parse(JSON.stringify(aspectTemplate.visibleTraits || [])),
+            hiddenTraits: JSON.parse(JSON.stringify(aspectTemplate.hiddenTraits || [])),
+            revealedTraits: [],
+            intents: (aspectTemplate.intents || []).map(intent => ({ ...intent })),
+            currentIntent: null,
+            states: [], 
+            tookPressureThisTurn: false,
+            rewards: { ...(aspectTemplate.rewards || {}) },
+            turnCount: 0
+        };
+
+        currentPlayerRef.prepareForEncounter(); 
+        playerEncounterState.composure = 0;
+        playerEncounterState.disorientationClaritySpentThisTurn = false;
+
+        _chooseAspectIntent(); 
+
+        if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Encounter begins: ${currentAspect.name} materializes!`, "critical_system");
+        _startPlayerTurn(); 
+        return true;
+    }
+
+    function endEncounter(outcome) { 
+        if(!isActive) return; 
+        isActive = false; 
+        if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Encounter with ${currentAspect.name} concludes. Outcome: ${outcome}.`, "system_major_event"); 
+        switch (outcome) { 
+            case "player_win_resolve": case "player_win_resonance": const victoryType = outcome === 'player_win_resolve' ? 'Understanding' : 'Integration'; if(UIManager) UIManager.addLogEntry(`You achieved ${victoryType} with ${currentAspect.name}!`, "reward_major"); if (currentAspect.rewards) { if (currentAspect.rewards.insight) currentPlayerRef.modifyInsight(currentAspect.rewards.insight, `resolving ${currentAspect.name}`); if (currentAspect.rewards.conceptPool?.length > 0) { const cardId = currentAspect.rewards.conceptPool[Math.floor(Math.random() * currentAspect.rewards.conceptPool.length)]; if(UIManager) UIManager.addLogEntry(`A new understanding forms: "${CONCEPT_CARD_DEFINITIONS[cardId]?.name}".`, "reward"); currentPlayerRef.addConceptToDeck(cardId, true); } if (currentAspect.rewards.memoryPool?.length > 0) { const memoryId = currentAspect.rewards.memoryPool[Math.floor(Math.random() * currentAspect.rewards.memoryPool.length)]; currentPlayerRef.addMemory(memoryId); } } break; 
+            case "player_flee": if(UIManager) UIManager.addLogEntry("You disengage.", "system"); currentPlayerRef.modifyClarity(-2, "fleeing"); currentPlayerRef.modifyDespair(1, "unresolved encounter"); break; 
+            case "aspect_win": if(UIManager) UIManager.addLogEntry(`${currentAspect.name} overwhelmed your psyche.`, "critical"); break; 
+            case "aspect_fled": if(UIManager) UIManager.addLogEntry(`${currentAspect.name} faded. An enigma remains.`, "system_negative"); currentPlayerRef.modifyDespair(1, `${currentAspect.name} disengaged`); break; 
+        } 
+        currentAspect = null; 
+        playerEncounterState = { composure: 0, disorientationClaritySpentThisTurn: false }; 
+        if(typeof Game !== 'undefined' && Game.returnFromEncounter) Game.returnFromEncounter(viewToReturnToAfterEncounter); 
+    }
+    function _startPlayerTurn() { if (!isActive || !currentAspect) return; if(UIManager) UIManager.addLogEntry("--- Your Turn ---", "turn"); playerEncounterState.disorientationClaritySpentThisTurn = false; currentPlayerRef.startTurnInEncounter(); _updateEncounterUIDisplay(); if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = false; if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
+    function _endPlayerTurn() { if (!isActive || !currentAspect) return; if(UIManager) UIManager.addLogEntry("You steady your thoughts, ending your turn.", "system"); if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = true; _startAspectTurn(); }
+    function _startAspectTurn() { if (!isActive || !currentAspect) return; currentAspect.turnCount++; if(UIManager) UIManager.addLogEntry(`--- ${currentAspect.name}'s Turn (${currentAspect.turnCount}) ---`, "turn"); if (currentAspect.tookPressureThisTurn && currentAspect.visibleTraits.some(t => t.name.includes("Grudge Holder"))) { _gainAspectComposure(1, "Grudge Holder Trait"); } currentAspect.tookPressureThisTurn = false; _updateAspectStates(); if (currentAspect.currentIntent && typeof aspectIntentEffects[currentAspect.currentIntent.functionName] === 'function') { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} intends: ${currentAspect.currentIntent.description}`, "intent"); aspectIntentEffects[currentAspect.currentIntent.functionName](currentAspect.currentIntent.params || {}); } else { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} hesitates.`, "system"); } if (_checkEncounterWinLoss()) return; _chooseAspectIntent(); _updateEncounterUIDisplay(); if (isActive) { setTimeout(() => { if (isActive) _startPlayerTurn(); }, 800); } }
+    function playConceptCard(cardId) { if (!isActive || !currentPlayerRef || !currentAspect) return; const cardDef = CONCEPT_CARD_DEFINITIONS[cardId]; if (!cardDef) { if(UIManager) UIManager.addLogEntry(`Error playing unknown Concept ID: ${cardId}`, "error"); return; } let actualCost = cardDef.cost; const disorientationInHand = currentPlayerRef.hand.some(id => id === "TRM001"); if (cardDef.id !== "TRM001" && disorientationInHand && !playerEncounterState.disorientationClaritySpentThisTurn) { actualCost += 1; } if (!currentPlayerRef.spendFocusForCard(actualCost, cardDef.name)) return; const playedCard = currentPlayerRef.playCardFromHand(cardId); if (!playedCard) { console.error(`Failed to retrieve ${cardId} from hand after focus spend.`); return; } if(UIManager) UIManager.addLogEntry(`Played ${cardDef.name}.`, "player_action"); if (cardDef.effectFunctionName && typeof conceptCardEffects[cardDef.effectFunctionName] === 'function') { conceptCardEffects[cardDef.effectFunctionName](cardDef); } else { if(UIManager) UIManager.addLogEntry(`Effect for ${cardDef.name} not yet defined.`, "error"); } if (cardDef.keywords.includes("#DissonanceSource") && currentAspect.visibleTraits.some(t => t.name.includes("Feeds on Negativity"))) { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} draws strength from the dissonance!`, "aspect_action_subtle"); _gainAspectComposure(1, "Feeds on Negativity"); } const isChallenge = cardDef.keywords.includes("#Challenge"); const lashesOutTrait = currentAspect.hiddenTraits.find(t => t.name.includes("Lashes Out") && currentAspect.revealedTraits.includes(t.name)); if (isChallenge && lashesOutTrait && currentAspect.resolve < (currentAspect.maxResolve * 0.4)) { if(UIManager) UIManager.addLogEntry(`TRAIT TRIGGER: ${currentAspect.name} 'Lashes Out When Cornered'!`, "critical"); const lashOutIntent = currentAspect.intents.find(intent => intent.id === "INT_DOUBT_01" || intent.name.includes("Jab")); if (lashOutIntent && typeof aspectIntentEffects[lashOutIntent.functionName] === 'function') { aspectIntentEffects[lashOutIntent.functionName](lashOutIntent.params || {}); } } _updateEncounterUIDisplay(); if (_checkEncounterWinLoss()) return; if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
+    function _getUnrevealedTraitCount() { if (!currentAspect) return 0; return currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name)).length; }
+    function _updateEncounterUIDisplay() { if (!isActive || !currentAspect || !currentPlayerRef || !UIManager) return; UIManager.displayEncounterView(currentAspect, currentPlayerRef, playerEncounterState); UIManager.updatePlayerHand(currentPlayerRef.getHandCardDefinitions()); }
+    function _applyPressureToAspect(amount, source = "a Concept") { if (!currentAspect) return; let pressureApplied = amount; if (currentAspect.states.some(s => s.name === "Vulnerable")) pressureApplied *= 1.5; if (currentAspect.composure > 0) { const absorbed = Math.min(pressureApplied, currentAspect.composure); currentAspect.composure -= absorbed; pressureApplied -= absorbed; if(UIManager) UIManager.addLogEntry(`${currentAspect.name}'s Composure absorbs ${absorbed} Pressure.`, "combat"); } if (pressureApplied > 0) { currentAspect.resolve -= Math.floor(pressureApplied); currentAspect.tookPressureThisTurn = true; if(UIManager) UIManager.addLogEntry(`${currentAspect.name} takes ${Math.floor(pressureApplied)} Pressure from ${source}. Resolve: ${currentAspect.resolve}/${currentAspect.maxResolve}`, "combat_crit"); } if (currentAspect.resolve <= 0) currentAspect.resolve = 0; }
+    function _gainAspectComposure(amount, source = "") { if (!currentAspect) return; currentAspect.composure += amount; if (currentAspect.composure > currentAspect.maxComposureCap) currentAspect.composure = currentAspect.maxComposureCap; if(UIManager) UIManager.addLogEntry(`${currentAspect.name} gains ${amount} Composure (${source}). Composure: ${currentAspect.composure}`, "combat"); }
+    function _buildResonance(amount, source = "") { if (!currentAspect) return; if (source.includes("Shared Sorrow") && (currentAspect.visibleTraits.some(t => t.name.toLowerCase().includes("sad") || t.name.toLowerCase().includes("wound")) || currentAspect.hiddenTraits.some(t => (currentAspect.revealedTraits.includes(t.name)) && (t.name.toLowerCase().includes("sad") || t.name.toLowerCase().includes("wound"))))) { amount += 1; if(UIManager) UIManager.addLogEntry(`"${source}" resonates deeply (+1 bonus).`, "system_positive_strong"); } currentAspect.resonance += amount; if (currentAspect.resonance > currentAspect.resonanceGoal) currentAspect.resonance = currentAspect.resonanceGoal; if(UIManager) UIManager.addLogEntry(`Resonance grows by ${amount} (${source}). (${currentAspect.resonance}/${currentAspect.resonanceGoal})`, "system_positive"); }
+    function _buildDissonance(amount, source = "") { if (!currentAspect) return; currentAspect.dissonance += amount; if(UIManager) UIManager.addLogEntry(`Dissonance deepens by ${amount} (${source}). (${currentAspect.dissonance}/${currentAspect.dissonanceThreshold})`, "system_negative"); if (currentAspect.dissonance >= currentAspect.dissonanceThreshold && !currentAspect.dissonanceTriggeredThisThreshold) { currentAspect.dissonanceTriggeredThisThreshold = true; if(UIManager) UIManager.addLogEntry(`${currentAspect.name} crosses Dissonance threshold! It becomes agitated!`, "critical"); _applyAspectState({ name: "Agitated", duration: 2, data: { pressureBoost: 1 } }); currentPlayerRef.addTraumaToDiscard("TRM001"); } }
+    function _applyAspectState(stateObject) { if (!currentAspect) return; let existingState = currentAspect.states.find(s => s.name === stateObject.name); if (existingState) { existingState.duration = Math.max(existingState.duration || 0, stateObject.duration || 0); if(stateObject.data) existingState.data = {...existingState.data, ...stateObject.data}; } else { currentAspect.states.push(stateObject); } if(UIManager) UIManager.addLogEntry(`${currentAspect.name} becomes ${stateObject.name}.`, "aspect_action_subtle"); }
+    function _updateAspectStates() { if (!currentAspect || !currentAspect.states) return; currentAspect.states = currentAspect.states.filter(state => { if (state.duration !== undefined) { state.duration--; if (state.duration <= 0) { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} is no longer ${state.name}.`, "system"); return false; } } return true; }); }
+    function _chooseAspectIntent() { if (!currentAspect || !currentAspect.intents || currentAspect.intents.length === 0) { currentAspect.currentIntent = { description: "Stands mutely.", functionName: null }; return; } const availableIntents = currentAspect.intents.filter(intent => { if (intent.id === "INT_DOUBT_03" && currentAspect.turnCount < 2) return false; return true; }); if (availableIntents.length === 0) { currentAspect.currentIntent = currentAspect.intents[0] || { description: "Is still.", functionName: null}; } else { currentAspect.currentIntent = availableIntents[Math.floor(Math.random() * availableIntents.length)]; } }
+    function revealHiddenAspectTrait() { if (!isActive || !currentAspect || currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0) { if (currentPlayerRef.insight < 1 && UIManager) UIManager.addLogEntry("Not enough Insight.", "warning"); else if (_getUnrevealedTraitCount() === 0 && UIManager) UIManager.addLogEntry("No more hidden traits.", "system"); return; } currentPlayerRef.modifyInsight(-1, "revealing a Trait"); const unrevealed = currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name)); if (unrevealed.length > 0) { const traitToReveal = unrevealed[0]; currentAspect.revealedTraits.push(traitToReveal.name); if(UIManager) UIManager.addLogEntry(`Revealed: ${traitToReveal.name} - ${traitToReveal.description}`, "discovery"); } _updateEncounterUIDisplay(); if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
+    function _checkEncounterWinLoss() { if (!isActive || !currentAspect) return false; if (currentPlayerRef.integrity <= 0) { endEncounter("aspect_win"); return true; } if (currentAspect.resolve <= 0) { endEncounter("player_win_resolve"); return true; } if (currentAspect.resonance >= currentAspect.resonanceGoal) { endEncounter("player_win_resonance"); return true; } return false; }
+
+    const conceptCardEffects = {
+        playGraspForAwareness: (cardDef) => { currentPlayerRef.modifyFocus(1, cardDef.name); currentPlayerRef.drawFromAwakeningDeck(); },
+        playFragmentedMemoryTheFall: (cardDef) => { currentPlayerRef.modifyClarity(2, cardDef.name); currentPlayerRef.addTraumaToDiscard("TRM001"); if(UIManager) UIManager.addJournalEntry("A Glimpse of the Fall", "Painful, fractured visions... how I arrived. Clarity gained, but Disorientation too."); if(typeof Game !== 'undefined' && Game.revealAwakeningMapConnections) Game.revealAwakeningMapConnections(); },
+        playEchoOfAName: (cardDef) => { const name = CONFIG.INITIAL_PSYCHONAUT_NAME; currentPlayerRef.name = name; if(typeof Game !== 'undefined' && Game.playerRecalledName) Game.playerRecalledName(); currentPlayerRef.modifyMaxIntegrity(PLAYER_INITIAL_STATS.maxIntegrity + 40); currentPlayerRef.modifyIntegrity(20, cardDef.name); currentPlayerRef.modifyMaxFocus(PLAYER_INITIAL_STATS.maxFocus + 2); currentPlayerRef.modifyFocus(2, cardDef.name); if(UIManager) UIManager.addJournalEntry("An Echo, A Name", `I remember... my name is ${name}. Strength returns.`); },
+        playPrimalFear: (cardDef) => { _applyPressureToAspect(3, cardDef.name); _buildDissonance(1, `${cardDef.name} (self)`); },
+        playSharedSorrow: (cardDef) => { let baseRes = 2; _buildResonance(baseRes, cardDef.name); currentPlayerRef.modifyIntegrity(1, cardDef.name); },
+        playDetachedObservation: (cardDef) => { if(typeof Game !== 'undefined' && Game.setPlayerTempFlag) { Game.setPlayerTempFlag("detachedObservationActive", true); } else { currentPlayerRef.detachedObservationActive = true; console.warn("Game.setPlayerTempFlag not available, using direct player flag for Detached Observation"); } if(UIManager) UIManager.addLogEntry("Perspective shifts: your next query will be more focused.", "system_positive"); currentPlayerRef.drawCards(1); },
+        playStandardInquiry: (cardDef) => { revealHiddenAspectTrait(); _buildResonance(1, cardDef.name); },
+        playStandardChallenge: (cardDef) => { _applyPressureToAspect(4, cardDef.name); _buildDissonance(1, cardDef.name); },
+        onDrawDisorientation: (cardDef) => { if(UIManager) UIManager.addLogEntry(`TRAUMA EFFECT: ${cardDef.name} clouds your thoughts! (Card costs +1 Focus this turn unless 1 Clarity spent).`, "trauma_major"); /* Game.handleTraumaOnDraw will be called from Player.js via main Game loop to manage choice */},
+        playDisorientation: (cardDef) => { _buildDissonance(1, cardDef.name + " (played)"); }
+    };
+
+    const aspectIntentEffects = {
+        intentSowConfusion: (params) => { const traumaId = params.traumaId || "TRM001"; if(UIManager) UIManager.addLogEntry(`${currentAspect.name} whispers disorienting notions.`, "aspect_action"); currentPlayerRef.addTraumaToDiscard(traumaId); },
+        intentWhisperDiscouragement: (params) => { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} murmurs words of despair.`, "aspect_action"); currentPlayerRef.modifyHope(-1, `${currentAspect.name}'s discouragement`); },
+        intentFadeAway: (params) => { if (currentAspect.turnCount >= 2) { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} begins to dissipate!`, "aspect_action_special"); endEncounter("aspect_fled"); } else { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} attempts to fade, but holds its form.`, "aspect_action_subtle"); _gainAspectComposure(2, "failed fade attempt"); } }
     };
 
     return {
-        init,
-        startStorylet,
-        makeChoice,
+        init, startEncounter, endEncounter,
+        isActive: () => isActive,
+        getCurrentAspectData: () => currentAspect,
+        playConceptCard,
+        playerEndTurn: _endPlayerTurn,
+        revealHiddenAspectTrait,
+        canSpendClarityForDisorientation: () => currentPlayerRef && currentPlayerRef.clarity > 0 && currentPlayerRef.hand.some(id => id === "TRM001") && playerEncounterState && !playerEncounterState.disorientationClaritySpentThisTurn,
+        spendClarityForDisorientation: () => { if (currentPlayerRef && currentPlayerRef.clarity > 0 && playerEncounterState) { currentPlayerRef.modifyClarity(-1, "negating Disorientation"); playerEncounterState.disorientationClaritySpentThisTurn = true; if(UIManager) UIManager.addLogEntry("You spend 1 Clarity to clear Disorientation's immediate effect.", "player_action_good"); _updateEncounterUIDisplay(); return true; } return false; },
+        getConceptCardEffectFunction: (functionName) => conceptCardEffects[functionName], // Expose effects map
+        playerEncounterState 
     };
 })();

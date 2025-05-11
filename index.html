@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persona Labyrinth: Echoes of Self - Prototype</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <h1>Persona Labyrinth: The Resentful Echo</h1>
+        </header>
+
+        <main id="encounter-area">
+            <div id="aspect-display-area">
+                <h2 id="aspect-name">The Resentful Echo</h2>
+                <div class="stats-bar">
+                    <span>Resolve:</span>
+                    <span id="aspect-resolve">25</span> / 25
+                    <div class="bar-background">
+                        <div id="aspect-resolve-bar" class="bar-fill resolve"></div>
+                    </div>
+                </div>
+                <div class="stats-bar">
+                    <span>Composure:</span>
+                    <span id="aspect-composure">0</span>
+                    <div class="bar-background">
+                        <div id="aspect-composure-bar" class="bar-fill composure"></div>
+                    </div>
+                </div>
+                <div id="aspect-meters-container">
+                    <div class="meter">
+                        <span>Resonance:</span>
+                        <span id="resonance-value">0</span> / 5
+                        <div class="bar-background">
+                            <div id="resonance-bar" class="bar-fill resonance-meter"></div>
+                        </div>
+                    </div>
+                    <div class="meter">
+                        <span>Dissonance:</span>
+                        <span id="dissonance-value">0</span> / 3
+                        <div class="bar-background">
+                            <div id="dissonance-bar" class="bar-fill dissonance-meter"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="aspect-traits-container">
+                    <h3>Traits:</h3>
+                    <ul id="visible-traits-list">
+                        <!-- Traits will be populated by JS -->
+                    </ul>
+                    <ul id="hidden-traits-list">
+                        <!-- Hidden traits or reveal button will be here -->
+                    </ul>
+                </div>
+                <div id="aspect-intent-container">
+                    <h3>Intent:</h3>
+                    <p id="aspect-intent-text">Initializing...</p>
+                </div>
+                 <div id="aspect-states-container">
+                    <h3>Aspect States:</h3>
+                    <ul id="aspect-states-list">
+                        <!-- Aspect states will be populated by JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <div id="player-display-area">
+                <h2>The Alchemist</h2>
+                <div class="stats-bar">
+                    <span>Integrity:</span>
+                    <span id="player-integrity">30</span> / 30
+                    <div class="bar-background">
+                        <div id="player-integrity-bar" class="bar-fill integrity"></div>
+                    </div>
+                </div>
+                <div class="stats-bar">
+                    <span>Focus:</span>
+                    <span id="player-focus">3</span> / 3
+                </div>
+                 <div id="player-states-container">
+                    <h3>Player States:</h3>
+                    <ul id="player-states-list">
+                        <!-- Player states will be populated by JS -->
+                    </ul>
+                </div>
+                <div id="player-hand-container">
+                    <h3>Hand:</h3>
+                    <div id="player-hand">
+                        <!-- Cards will be populated by JS -->
+                    </div>
+                </div>
+                <div id="deck-discard-info">
+                    <p>Deck: <span id="deck-count">0</span></p>
+                    <p>Discard: <span id="discard-count">0</span></p>
+                </div>
+            </div>
+        </main>
+
+        <div id="controls-area">
+            <button id="end-turn-button">End Turn</button>
+        </div>
+
+        <div id="message-log-container">
+            <h3>Log:</h3>
+            <div id="message-log">
+                <p>Encounter started with "The Resentful Echo".</p>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h2 id="game-over-message"></h2>
+            <button id="restart-button">Restart Prototype</button>
+        </div>
+
+        <div id="tooltip" class="hidden">
+            <!-- Tooltip content will be populated by JS -->
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

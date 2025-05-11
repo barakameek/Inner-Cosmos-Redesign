@@ -3,123 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Persona Labyrinth: Echoes of Self - Prototype</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Sunless Psyche: The Labyrinth Within (Conceptual Prototype)</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="game-container">
-        <header>
-            <h1>Persona Labyrinth: The Resentful Echo</h1>
+    <div id="game-wrapper">
+
+        <!-- Header / Meta Information Area -->
+        <header id="game-header">
+            <h1>Sunless Psyche</h1>
+            <div id="psychonaut-name-display">Psychonaut: <span class="value">The Wanderer</span></div>
+            <div id="current-ambition-display">Ambition: <span class="value">To Find Stillness</span></div>
         </header>
 
-        <main id="encounter-area">
-            <div id="aspect-display-area">
-                <h2 id="aspect-name">The Resentful Echo</h2>
-                <div class="stats-bar">
-                    <span>Resolve:</span>
-                    <span id="aspect-resolve">25</span> / 25
-                    <div class="bar-background">
-                        <div id="aspect-resolve-bar" class="bar-fill resolve"></div>
-                    </div>
-                </div>
-                <div class="stats-bar">
-                    <span>Composure:</span>
-                    <span id="aspect-composure">0</span>
-                    <div class="bar-background">
-                        <div id="aspect-composure-bar" class="bar-fill composure"></div>
-                    </div>
-                </div>
-                <div id="aspect-meters-container">
-                    <div class="meter">
-                        <span>Resonance:</span>
-                        <span id="resonance-value">0</span> / 5
-                        <div class="bar-background">
-                            <div id="resonance-bar" class="bar-fill resonance-meter"></div>
-                        </div>
-                    </div>
-                    <div class="meter">
-                        <span>Dissonance:</span>
-                        <span id="dissonance-value">0</span> / 3
-                        <div class="bar-background">
-                            <div id="dissonance-bar" class="bar-fill dissonance-meter"></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="aspect-traits-container">
-                    <h3>Traits:</h3>
-                    <ul id="visible-traits-list">
-                        <!-- Traits will be populated by JS -->
-                    </ul>
-                    <ul id="hidden-traits-list">
-                        <!-- Hidden traits or reveal button will be here -->
-                    </ul>
-                </div>
-                <div id="aspect-intent-container">
-                    <h3>Intent:</h3>
-                    <p id="aspect-intent-text">Initializing...</p>
-                </div>
-                 <div id="aspect-states-container">
-                    <h3>Aspect States:</h3>
-                    <ul id="aspect-states-list">
-                        <!-- Aspect states will be populated by JS -->
-                    </ul>
-                </div>
-            </div>
+        <!-- Main Game Area -->
+        <main id="main-content-area">
 
-            <div id="player-display-area">
-                <h2>The Alchemist</h2>
-                <div class="stats-bar">
-                    <span>Integrity:</span>
-                    <span id="player-integrity">30</span> / 30
-                    <div class="bar-background">
-                        <div id="player-integrity-bar" class="bar-fill integrity"></div>
+            <!-- Left Panel: Player Stats & Status -->
+            <aside id="player-status-panel">
+                <h2>Psychonaut Status</h2>
+                <div class="stat-block">
+                    <label>Integrity:</label>
+                    <div class="bar-container">
+                        <div id="player-integrity-bar" class="bar integrity"></div>
                     </div>
+                    <span id="player-integrity-value" class="value">100/100</span>
                 </div>
-                <div class="stats-bar">
-                    <span>Focus:</span>
-                    <span id="player-focus">3</span> / 3
+                <div class="stat-block">
+                    <label>Focus:</label>
+                    <div class="bar-container">
+                        <div id="player-focus-bar" class="bar focus"></div>
+                    </div>
+                    <span id="player-focus-value" class="value">5/5</span>
                 </div>
-                 <div id="player-states-container">
-                    <h3>Player States:</h3>
-                    <ul id="player-states-list">
-                        <!-- Player states will be populated by JS -->
+                <div class="stat-block">
+                    <label>Clarity:</label>
+                    <div class="bar-container">
+                        <div id="player-clarity-bar" class="bar clarity"></div>
+                    </div>
+                    <span id="player-clarity-value" class="value">10/10</span>
+                </div>
+                <div class="stat-block">
+                    <label>Hope:</label>
+                    <div class="bar-container">
+                        <div id="player-hope-bar" class="bar hope"></div>
+                    </div>
+                    <span id="player-hope-value" class="value">5/10</span>
+                </div>
+                <div class="stat-block">
+                    <label>Despair:</label>
+                    <div class="bar-container">
+                        <div id="player-despair-bar" class="bar despair"></div>
+                    </div>
+                    <span id="player-despair-value" class="value">1/10</span>
+                </div>
+
+                <div id="attunements-display">
+                    <h3>Attunements</h3>
+                    <ul>
+                        <li>Attraction (A): <span id="attunement-a" class="value">0</span></li>
+                        <li>Interaction (I): <span id="attunement-i" class="value">0</span></li>
+                        <li>Sensory (S): <span id="attunement-s" class="value">0</span></li>
+                        <li>Psychological (P): <span id="attunement-p" class="value">0</span></li>
+                        <li>Cognitive (C): <span id="attunement-c" class="value">0</span></li>
+                        <li>Relational (R): <span id="attunement-r" class="value">0</span></li>
+                        <li>RoleFocus (RF): <span id="attunement-rf" class="value">0</span></li>
                     </ul>
                 </div>
-                <div id="player-hand-container">
-                    <h3>Hand:</h3>
-                    <div id="player-hand">
-                        <!-- Cards will be populated by JS -->
+
+                <div id="memories-display">
+                    <h3>Active Memories (Artifacts)</h3>
+                    <ul id="active-memories-list">
+                        <!-- Memories will be populated by JS -->
+                        <li><span class="placeholder">No active memories</span></li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Center Panel: World Map / Location / Storylet / Encounter -->
+            <section id="world-interaction-panel">
+                <div id="map-view" class="view-active">
+                    <h2>The Inner Sea</h2>
+                    <div id="map-display-area">
+                        <!-- Placeholder for map rendering or textual description -->
+                        <p>A vast, dark ocean of consciousness stretches before you...</p>
+                        <p>Current Region: <span id="current-region-name" class="value">The Shallows of Awakening</span></p>
+                    </div>
+                    <div id="navigation-controls">
+                        <h3>Navigate:</h3>
+                        <button data-direction="north">North</button>
+                        <button data-direction="east">East</button>
+                        <button data-direction="south">South</button>
+                        <button data-direction="west">West</button>
+                        <button data-action="interact-location">Explore Current Location</button>
                     </div>
                 </div>
-                <div id="deck-discard-info">
-                    <p>Deck: <span id="deck-count">0</span></p>
-                    <p>Discard: <span id="discard-count">0</span></p>
+
+                <div id="location-view" class="view-hidden">
+                    <h2 id="location-name">Location Name</h2>
+                    <div id="location-description">
+                        <p>Description of the current location...</p>
+                    </div>
+                    <div id="location-actions">
+                        <h3>Actions:</h3>
+                        <!-- Location specific actions will be populated by JS -->
+                        <button data-action="rest">Rest (Restore Integrity/Hope)</button>
+                        <button data-action="shop">Visit Emporium of Thought</button>
+                        <button data-action="leave-location">Leave Location</button>
+                    </div>
                 </div>
-            </div>
+
+                <div id="storylet-view" class="view-hidden">
+                    <h2 id="storylet-title">Storylet Title</h2>
+                    <div id="storylet-text">
+                        <p>Narrative text of the storylet...</p>
+                    </div>
+                    <div id="storylet-choices">
+                        <h3>Choices:</h3>
+                        <!-- Choices will be populated by JS -->
+                        <button data-choice-id="1">Choice 1</button>
+                        <button data-choice-id="2">Choice 2</button>
+                    </div>
+                </div>
+
+                <div id="encounter-view" class="view-hidden">
+                    <!-- This will be similar to the previous prototype's encounter UI -->
+                    <h2>Encounter: <span id="aspect-name-encounter">Aspect Name</span></h2>
+                    <div id="aspect-encounter-status">
+                        <div>Resolve: <span id="aspect-resolve-encounter" class="value">X/Y</span></div>
+                        <div>Composure: <span id="aspect-composure-encounter" class="value">X</span></div>
+                        <div>Resonance: <span id="aspect-resonance-encounter" class="value">X/Y</span></div>
+                        <div>Dissonance: <span id="aspect-dissonance-encounter" class="value">X/Y</span></div>
+                        <div>Intent: <span id="aspect-intent-encounter" class="value">Aspect plans to...</span></div>
+                        <div>Traits: <ul id="aspect-traits-encounter"></ul></div>
+                    </div>
+                    <div id="player-encounter-status">
+                        <div>Your Focus: <span id="player-focus-encounter" class="value">X/Y</span></div>
+                        <div>Your Integrity: <span id="player-integrity-encounter" class="value">X/Y</span></div>
+                        <div>Active Stance: <span id="player-stance-encounter" class="value">Observer</span></div>
+                    </div>
+                    <div id="player-hand-encounter">
+                        <h3>Hand (Concepts):</h3>
+                        <div id="player-hand-cards">
+                            <!-- Cards will be populated here -->
+                        </div>
+                    </div>
+                    <div id="encounter-controls">
+                        <button id="end-turn-encounter">End Turn</button>
+                        <button id="reveal-trait-encounter" title="Spend Insight to reveal a hidden Trait">Reveal Trait</button>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Right Panel: Deck Info / Log / Journal -->
+            <aside id="context-panel">
+                <div id="deck-info-display">
+                    <h3>Deck of Concepts</h3>
+                    <p>Concepts in Deck: <span id="deck-count-display" class="value">0</span></p>
+                    <p>Concepts in Discard: <span id="discard-count-display" class="value">0</span></p>
+                    <p>Traumas (Dissonance): <span id="trauma-count-display" class="value">0</span></p>
+                    <button id="view-deck-button">View Full Deck</button>
+                </div>
+
+                <div id="message-log-display">
+                    <h3>Event Log</h3>
+                    <div id="log-entries">
+                        <p class="log-entry system">Game Initialized. Welcome, Psychonaut.</p>
+                        <!-- Log entries will be populated by JS -->
+                    </div>
+                </div>
+
+                <div id="journal-display">
+                    <h3>Psychonaut's Journal</h3>
+                    <div id="journal-entries">
+                        <p class="journal-entry"><span class="entry-title">First Entry:</span> The Inner Sea beckons...</p>
+                        <!-- Journal entries will be populated by JS -->
+                    </div>
+                    <button id="add-journal-entry-button">Add Personal Note</button>
+                </div>
+            </aside>
+
         </main>
 
-        <div id="controls-area">
-            <button id="end-turn-button">End Turn</button>
-        </div>
+        <!-- Footer / Meta Controls -->
+        <footer id="game-footer">
+            <button id="game-menu-button">Game Menu (Save/Load/Options)</button>
+            <span id="game-version">Sunless Psyche v0.0.1 (Conceptual)</span>
+        </footer>
 
-        <div id="message-log-container">
-            <h3>Log:</h3>
-            <div id="message-log">
-                <p>Encounter started with "The Resentful Echo".</p>
+        <!-- Modals / Pop-ups (Initially Hidden) -->
+        <div id="modal-overlay" class="view-hidden">
+            <div id="modal-deck-view" class="modal-content view-hidden">
+                <h2>Your Deck of Concepts</h2>
+                <ul id="full-deck-list"></ul>
+                <button class="close-modal-button">Close</button>
             </div>
+
+            <div id="modal-game-over" class="modal-content view-hidden">
+                <h2 id="game-over-title">Psychological Collapse!</h2>
+                <p id="game-over-text">Your journey into the Inner Sea has ended...</p>
+                <button id="restart-game-button">Begin Anew</button>
+            </div>
+            <!-- Other modals for settings, save/load prompts, etc. -->
         </div>
 
-        <div id="game-over-screen" class="hidden">
-            <h2 id="game-over-message"></h2>
-            <button id="restart-button">Restart Prototype</button>
-        </div>
+        <!-- Tooltip Element -->
+        <div id="tooltip" class="view-hidden"></div>
 
-        <div id="tooltip" class="hidden">
-            <!-- Tooltip content will be populated by JS -->
-        </div>
+    </div> <!-- End #game-wrapper -->
 
-    </div>
+    <!-- JavaScript Files -->
+    <!-- Order will matter here for dependencies if not using ES6 modules properly -->
+    <script src="js/config.js"></script>
+    <script src="js/ui_manager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/storylet_manager.js"></script>
+    <script src="js/concept_cards.js"></script> <!-- Or part of config/game_data -->
+    <script src="js/encounter_manager.js"></script>
+    <script src="js/main.js"></script> <!-- Main should usually be last -->
 
-    <script src="script.js"></script>
 </body>
 </html>

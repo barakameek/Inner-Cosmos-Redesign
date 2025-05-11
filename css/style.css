@@ -8,43 +8,46 @@
 }
 
 body {
-    font-family: 'Georgia', 'Times New Roman', serif; /* A more "literary" feel */
-    background-color: #1a1a2e; /* Very dark desaturated blue */
-    color: #e0e0fc; /* Pale lavender/off-white */
-    line-height: 1.6;
-    font-size: 16px; /* Base font size */
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background-color: #12121f; /* Darker, moodier base */
+    color: #c8c8e0; /* Slightly less bright default text for mood */
+    line-height: 1.7; /* Slightly more spacing for readability */
+    font-size: 17px; /* Slightly larger base for readability */
+    overflow-x: hidden; /* Prevent horizontal scroll from wide elements */
 }
 
 #game-wrapper {
-    max-width: 1600px; /* Max width for large screens */
-    margin: 0 auto; /* Center the game wrapper */
-    padding: 10px;
+    max-width: 1700px; /* Slightly wider for three columns */
+    margin: 0 auto;
+    padding: 15px; /* More padding around the game */
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Ensure it takes full viewport height */
+    min-height: 100vh;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Trajan Pro', 'Palatino Linotype', serif; /* More ornate for headers */
-    color: #c0b0ff; /* Lighter, more distinct lavender for headers */
-    margin-bottom: 0.5em;
+    font-family: 'Trajan Pro', 'Constantia', 'Palatino Linotype', serif;
+    color: #b0a0e0; /* Muted lavender for headers */
+    margin-bottom: 0.6em; /* More space after headers */
+    font-weight: normal; /* Trajan often looks better non-bold */
 }
 
 h1 {
-    font-size: 2.5em;
+    font-size: 2.8em; /* Larger title */
     text-align: center;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+    color: #d0c0ff; /* Brighter for main title */
 }
 
 h2 {
-    font-size: 1.8em;
-    border-bottom: 1px solid #4a4a6e;
-    padding-bottom: 0.3em;
+    font-size: 1.9em;
+    border-bottom: 1px solid #3a3a5e; /* Darker accent line */
+    padding-bottom: 0.4em;
 }
 
 h3 {
-    font-size: 1.4em;
-    color: #d0c0ff;
+    font-size: 1.5em;
+    color: #c0b0f0;
 }
 
 ul {
@@ -52,117 +55,128 @@ ul {
 }
 
 button {
-    background-color: #4a3a7e; /* Dark purple */
-    color: #e0e0fc;
-    border: 1px solid #6a5a9e; /* Lighter purple border */
-    padding: 8px 15px;
-    border-radius: 4px;
+    background-color: #38285e; /* Muted dark purple */
+    color: #d8d8f0;
+    border: 1px solid #504070;
+    padding: 10px 18px; /* Slightly larger buttons */
+    border-radius: 3px; /* Sharper edges */
     cursor: pointer;
-    font-family: inherit;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    font-family: 'Segoe UI', Tahoma, sans-serif; /* Sans-serif for button text clarity */
+    font-size: 0.95em;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 button:hover {
-    background-color: #6a5a9e; /* Lighter purple on hover */
+    background-color: #48386e;
+    border-color: #706090;
 }
 
 button:active {
     transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 button:disabled {
-    background-color: #333;
-    color: #777;
+    background-color: #252535;
+    color: #666;
     cursor: not-allowed;
-    border-color: #555;
+    border-color: #404050;
+    box-shadow: none;
 }
 
-.value { /* For dynamic values in spans */
+.value {
     font-weight: bold;
-    color: #f0f0ff; /* Slightly brighter */
+    color: #efefff; /* Brighter for values */
 }
 
 .placeholder {
     font-style: italic;
-    color: #8080a0; /* Dimmer for placeholders */
+    color: #707090; /* Darker placeholder */
 }
 
 /* --- Header --- */
 #game-header {
-    background-color: rgba(26, 26, 46, 0.7); /* Semi-transparent dark background */
-    padding: 15px;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #4a4a6e; /* Darker purple accent */
+    background-color: rgba(12, 12, 25, 0.7);
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #30304e;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-#game-header h1 { margin-bottom: 0; font-size: 2em; }
+#game-header h1 { margin-bottom: 0; font-size: 2.2em; }
 #psychonaut-name-display, #current-ambition-display {
-    font-size: 0.9em;
-    color: #b0a0e0;
+    font-size: 1em;
+    color: #a090d0;
 }
 
 
 /* --- Main Content Area (Three Column Layout) --- */
 #main-content-area {
     display: flex;
-    flex-grow: 1; /* Take up available vertical space */
-    gap: 10px; /* Space between panels */
+    flex-grow: 1;
+    gap: 15px; /* More space between panels */
 }
 
 #player-status-panel, #context-panel {
-    width: 25%; /* Width for side panels */
-    background-color: #2a2a4e; /* Slightly lighter dark blue/purple */
-    padding: 15px;
-    border-radius: 5px;
-    overflow-y: auto; /* Scroll if content overflows */
+    width: 26%; /* Slightly more space for side panels */
+    background-color: #1f1f35; /* Darker panel background */
+    padding: 20px;
+    border-radius: 4px; /* Sharper */
+    border: 1px solid #2f2f45; /* Subtle border */
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px; /* More space between sections in panels */
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
 }
 
 #world-interaction-panel {
-    width: 50%; /* Center panel takes more space */
-    background-color: #20203e; /* Even darker for contrast */
-    padding: 15px;
-    border-radius: 5px;
+    width: 48%; /* Center panel slightly less dominant to balance */
+    background-color: #181828; /* Darkest for central focus */
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid #282838;
     overflow-y: auto;
+    display: flex; /* To allow views to take full height */
+    flex-direction: column; /* Stack views if multiple were active (they won't be) */
 }
 
 /* --- Player Status Panel (Left) --- */
 .stat-block {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 .stat-block label {
     display: block;
-    margin-bottom: 3px;
-    font-size: 0.9em;
-    color: #b0a0e0;
+    margin-bottom: 4px;
+    font-size: 1em; /* Larger labels */
+    color: #a090d0;
 }
 .bar-container {
-    background-color: #1a1a2e; /* Darkest background for bars */
+    background-color: #101018;
     border-radius: 3px;
-    height: 18px;
-    border: 1px solid #4a4a6e;
-    margin-bottom: 3px;
+    height: 20px; /* Slightly taller bars */
+    border: 1px solid #30304e;
+    margin-bottom: 4px;
     overflow: hidden;
+    position: relative; /* For potential text overlay on bars */
 }
 .bar {
     height: 100%;
-    transition: width 0.3s ease-in-out;
+    transition: width 0.4s ease-in-out; /* Smoother transition */
     border-radius: 2px;
 }
-.bar.integrity { background-color: #50c878; } /* Emerald green */
-.bar.focus { background-color: #30a0f0; } /* Bright blue */
-.bar.clarity { background-color: #f0e080; } /* Pale yellow */
-.bar.hope { background-color: #f08080; } /* Light coral/pink */
-.bar.despair { background-color: #704070; } /* Dark muted purple */
+.bar.integrity { background: linear-gradient(to right, #30a858, #50c878); } /* Gradient for depth */
+.bar.focus { background: linear-gradient(to right, #2080d0, #30a0f0); }
+.bar.clarity { background: linear-gradient(to right, #d0c060, #f0e080); }
+.bar.hope { background: linear-gradient(to right, #e06060, #f08080); }
+.bar.despair { background: linear-gradient(to right, #603060, #704070); }
 
 #attunements-display ul li, #active-memories-list li {
-    font-size: 0.9em;
-    padding: 3px 0;
-    border-bottom: 1px dashed #3a3a5e;
+    font-size: 0.95em;
+    padding: 4px 0;
+    border-bottom: 1px dashed #2f2f45; /* Darker dash */
 }
 #active-memories-list li:last-child, #attunements-display ul li:last-child {
     border-bottom: none;
@@ -173,107 +187,274 @@ button:disabled {
     display: none !important;
 }
 .view-active {
-    display: block !important; /* Or flex, grid, depending on content */
+    display: flex !important; /* Use flex for views to manage internal layout */
+    flex-direction: column;
+    flex-grow: 1; /* Make active view take up space */
 }
 
-#map-display-area, #location-description, #storylet-text {
-    background-color: rgba(16, 16, 30, 0.5); /* Very dark inner background */
-    padding: 10px;
-    border-radius: 4px;
+/* Pre-Game Intro View */
+#pre-game-intro-view {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+#pre-game-title {
+    font-size: 2.5em;
+    color: #706090; /* Faded color */
+    margin-bottom: 30px;
+}
+#pre-game-text-area {
+    max-width: 600px;
+    margin-bottom: 40px;
+}
+#pre-game-text-area .intro-line {
+    font-size: 1.3em;
+    color: #9080b0;
     margin-bottom: 15px;
-    min-height: 150px; /* Ensure some space */
-    border: 1px solid #3a3a5e;
+    opacity: 0; /* Start hidden, JS will reveal */
+    animation: fadeInLine 1.5s ease-out forwards;
+}
+@keyframes fadeInLine {
+    to { opacity: 1; }
+}
+#continue-from-precipice {
+    font-size: 1.2em;
+    padding: 12px 25px;
 }
 
-#navigation-controls, #location-actions, #storylet-choices {
-    margin-top: 15px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-#navigation-controls h3, #location-actions h3, #storylet-choices h3 {
-    width: 100%; /* Make heading span full width */
-    margin-bottom: 5px;
-}
 
-/* Encounter View Specifics (basic placeholders) */
-#encounter-view {
+/* Node Map View */
+#map-view {
+    gap: 15px; /* Space between map elements */
+}
+#node-map-container {
+    flex-grow: 1; /* Allow map to take available space */
+    background-color: rgba(10, 10, 20, 0.5);
+    border: 1px solid #282838;
+    border-radius: 4px;
+    padding: 15px;
+    position: relative; /* For absolute positioning of nodes */
+    min-height: 300px; /* Ensure space for map */
+    display: flex; /* For placeholder if needed */
+    justify-content: center;
+    align-items: center;
+    overflow: auto; /* If map content is larger */
+}
+.map-node { /* Style for individual nodes rendered by JS */
+    position: absolute; /* JS will set top/left */
+    width: 100px; /* Example size */
+    height: 60px;
+    background-color: #38285e;
+    border: 1px solid #504070;
+    border-radius: 3px;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+    font-size: 0.85em;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.map-node:hover {
+    background-color: #48386e;
+    border-color: #706090;
+    transform: scale(1.05);
+}
+.map-node.current {
+    border-color: #d0c0ff; /* Highlight current node */
+    background-color: #504070;
+    box-shadow: 0 0 10px #d0c0ff;
+}
+.map-node.accessible {
+    /* No specific style change needed, default hover is enough */
+    /* Or add a subtle glow if desired */
+}
+.map-node.locked, .map-node.inaccessible {
+    background-color: #252535;
+    border-color: #404050;
+    color: #666;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+.map-node-name {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+.map-node-type {
+    font-size: 0.8em;
+    font-style: italic;
+}
+.map-connection-line { /* For lines drawn by JS (e.g. with SVG) */
+    stroke: #403060;
+    stroke-width: 2px;
+}
+.map-connection-line.accessible {
+    stroke: #605080;
+}
+
+#map-node-info {
+    background-color: rgba(16, 16, 30, 0.5);
+    padding: 10px 15px;
+    border-radius: 4px;
+    border: 1px solid #2f2f45;
+    text-align: center;
+}
+#map-node-info p { margin-bottom: 8px; }
+#explore-current-node-button { margin-top: 10px; }
+
+
+/* Location View (for Sanctuaries etc.) & Storylet View */
+#location-description, #storylet-text {
+    background-color: rgba(12, 12, 22, 0.6);
+    padding: 15px;
+    border-radius: 3px;
+    margin-bottom: 20px;
+    min-height: 120px;
+    border: 1px solid #282838;
+    flex-grow: 1; /* Allow text area to expand */
+    overflow-y: auto;
+}
+#location-actions, #storylet-choices {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column; /* Stack buttons vertically for now */
+    gap: 10px;
+    align-items: flex-start; /* Align buttons to left */
+}
+#location-actions button, #storylet-choices button {
+    width: auto; /* Or 100% if preferred */
+    min-width: 200px; /* Ensure decent button size */
+}
+
+
+/* Encounter View Specifics */
+#encounter-view {
     gap: 15px;
 }
-#aspect-encounter-status, #player-encounter-status {
-    background-color: rgba(16, 16, 30, 0.5);
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #3a3a5e;
+.encounter-columns {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
 }
-#aspect-encounter-status div, #player-encounter-status div {
-    margin-bottom: 5px;
+.encounter-aspect-info, .encounter-player-info {
+    flex: 1; /* Distribute space equally */
+    background-color: rgba(12, 12, 22, 0.6);
+    padding: 15px;
+    border-radius: 3px;
+    border: 1px solid #282838;
+}
+.encounter-aspect-info div, .encounter-player-info div {
+    margin-bottom: 6px;
+    font-size: 0.95em;
+}
+#aspect-traits-encounter li {
+    font-size: 0.9em;
+    margin-left: 15px;
+    list-style-type: disc;
+    color: #a090c0;
 }
 #player-hand-cards {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
-    padding: 10px;
-    background-color: rgba(16, 16, 30, 0.3);
-    border-radius: 4px;
-    min-height: 100px;
+    padding: 15px;
+    background-color: rgba(12, 12, 22, 0.4);
+    border: 1px solid #282838;
+    border-radius: 3px;
+    min-height: 140px; /* Taller hand area */
+    align-content: flex-start; /* Align cards to top if wrapping */
 }
-/* Basic card styling for encounter view */
-.encounter-card-placeholder {
-    width: 80px;
-    height: 120px;
-    background-color: #4a3a7e;
-    border: 1px solid #6a5a9e;
+.encounter-card-placeholder { /* Re-styling for actual cards */
+    width: 110px; /* Wider cards */
+    height: 160px; /* Taller cards */
+    background-color: #281848; /* Darker card base */
+    border: 1px solid #403060;
     border-radius: 5px;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    justify-content: space-between; /* Space out content */
+    padding: 8px;
     font-size: 0.8em;
-    text-align: center;
+    text-align: left; /* Align card text left */
     cursor: pointer;
+    color: #c8c8e0;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .encounter-card-placeholder:hover {
-    border-color: #c0b0ff;
+    border-color: #a090d0;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+}
+.card-name-encounter { font-weight: bold; font-size: 1.1em; color: #efefff; margin-bottom: 4px;}
+.card-cost-encounter { float: right; font-weight: bold; color: #f0e080; }
+.card-type-encounter { font-style: italic; font-size: 0.9em; color: #a090c0; margin-bottom: 6px;}
+.card-desc-encounter { flex-grow: 1; margin-bottom: 6px; font-size: 0.95em; }
+.card-keywords-encounter { font-size: 0.85em; color: #8070a0; text-align: right;}
+
+#encounter-controls {
+    display: flex;
+    justify-content: space-between; /* Space out buttons */
+    align-items: center;
+    margin-top: 15px;
 }
 
 
 /* --- Context Panel (Right) --- */
 #deck-info-display, #message-log-display, #journal-display {
-    background-color: rgba(32, 32, 62, 0.5); /* Slightly lighter for inner boxes */
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #3a3a5e;
+    background-color: rgba(24, 24, 40, 0.6);
+    padding: 15px;
+    border-radius: 3px;
+    border: 1px solid #2f2f45;
 }
 
 #log-entries, #journal-entries {
-    max-height: 200px; /* Limit height and allow scroll */
+    max-height: 220px;
     overflow-y: auto;
-    padding-right: 5px; /* For scrollbar */
+    padding-right: 8px;
+    font-family: 'Consolas', 'Menlo', monospace; /* Monospace for logs/journal */
+    font-size: 0.9em; /* Slightly smaller for density */
 }
 .log-entry, .journal-entry {
-    font-size: 0.85em;
-    padding: 3px 0;
-    border-bottom: 1px dotted #4a4a6e;
+    padding: 4px 2px;
+    border-bottom: 1px dotted #3a3a5e;
+    line-height: 1.5;
 }
 .log-entry:last-child, .journal-entry:last-child {
     border-bottom: none;
 }
-.log-entry.system { color: #80b0e0; } /* System messages in a different color */
-.journal-entry .entry-title { font-weight: bold; color: #d0c0ff; }
+.log-entry.system { color: #70a0d0; }
+.log-entry.story { color: #b090d0; }
+.log-entry.choice { color: #a0c0a0; }
+.log-entry.reward { color: #d0d0a0; font-weight: bold; }
+.log-entry.damage, .log-entry.trauma, .log-entry.critical, .log-entry.system_negative { color: #e07070; }
+.log-entry.error { color: #ff5050; font-weight: bold;}
+.log-entry.warning { color: #ffd070;}
+.log-entry.system_positive { color: #80d080; }
+.log-entry.turn { color: #9090b0; font-weight: bold; margin-top: 5px; }
+.log-entry.player_action { color: #a0c0f0; }
+.log-entry.aspect_action { color: #f0a0c0; }
+.log-entry.combat { color: #c0c0c0; }
+.log-entry.combat_crit { color: #e0e090; font-weight: bold; }
+.log-entry.discovery { color: #a0e0e0; font-style: italic; }
+
+
+.journal-entry .entry-title { font-weight: bold; color: #b0a0e0; }
 
 /* --- Footer --- */
 #game-footer {
-    background-color: rgba(26, 26, 46, 0.7);
-    padding: 10px;
-    margin-top: 10px;
-    border-top: 2px solid #4a4a6e;
+    background-color: rgba(12, 12, 25, 0.7);
+    padding: 12px 20px;
+    margin-top: 15px;
+    border-top: 2px solid #30304e;
     text-align: center;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.8em;
+    font-size: 0.9em;
 }
 
 /* --- Modals --- */
@@ -283,65 +464,74 @@ button:disabled {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* Dark overlay */
+    background-color: rgba(10, 10, 15, 0.85); /* Darker overlay */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000; /* On top of everything */
+    z-index: 1000;
+    backdrop-filter: blur(3px); /* Subtle blur */
 }
 .modal-content {
-    background-color: #2a2a4e; /* Same as side panels */
-    padding: 20px;
-    border-radius: 8px;
-    border: 2px solid #4a4a6e;
-    min-width: 300px;
-    max-width: 80%;
-    max-height: 80vh;
+    background-color: #1f1f35; /* Same as side panels */
+    padding: 25px;
+    border-radius: 4px;
+    border: 1px solid #3f3f55;
+    min-width: 350px;
+    max-width: 60%;
+    max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    box-shadow: 0 5px 25px rgba(0,0,0,0.5);
 }
 .modal-content h2 {
     text-align: center;
     margin-top: 0;
+    color: #d0c0ff;
 }
 .close-modal-button {
     display: block;
-    margin: 15px auto 0;
+    margin: 20px auto 0;
 }
 #full-deck-list li {
-    padding: 5px;
-    background-color: rgba(16, 16, 30, 0.5);
-    margin-bottom: 5px;
+    padding: 6px 10px;
+    background-color: rgba(12, 12, 22, 0.7);
+    margin-bottom: 6px;
     border-radius: 3px;
+    font-size: 0.95em;
 }
 
 
 /* --- Tooltip --- */
 #tooltip {
-    position: absolute; /* Positioned by JS */
-    background-color: rgba(10, 10, 20, 0.95); /* Very dark, almost opaque */
-    color: #e0e0fc;
-    border: 1px solid #6a5a9e;
-    border-radius: 4px;
-    padding: 8px;
-    font-size: 0.85em;
-    z-index: 1100; /* Above modals if needed */
-    max-width: 250px;
-    pointer-events: none; /* So it doesn't interfere with mouse events */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    position: absolute;
+    background-color: rgba(5, 5, 10, 0.97);
+    color: #d8d8f0;
+    border: 1px solid #504070;
+    border-radius: 3px;
+    padding: 10px;
+    font-size: 0.9em;
+    z-index: 1100;
+    max-width: 280px;
+    pointer-events: none;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    line-height: 1.5;
 }
+#tooltip strong { color: #efefff; }
+#tooltip em { color: #a090c0; }
+#tooltip small { color: #8070a0; }
 
-/* --- Scrollbar Styling (Optional, Webkit-specific for a thematic touch) --- */
+
+/* --- Scrollbar Styling --- */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 10px; /* Wider scrollbar */
 }
 ::-webkit-scrollbar-track {
-    background: #1a1a2e; /* Darkest */
+    background: #101018;
 }
 ::-webkit-scrollbar-thumb {
-    background: #4a3a7e; /* Dark purple */
-    border-radius: 4px;
+    background: #38285e;
+    border-radius: 5px;
+    border: 1px solid #281848;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #6a5a9e; /* Lighter purple */
+    background: #48386e;
 }

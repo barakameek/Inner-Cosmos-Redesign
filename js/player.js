@@ -1,16 +1,15 @@
 // js/player.js
 
-// Using a class for the Player for better organization and potential for multiple instances if needed (though unlikely for this game)
 class Player {
     constructor() {
-        // Initialize with deep copies of PLAYER_INITIAL_STATS from config.js
         this.name = CONFIG.INITIAL_PSYCHONAUT_NAME;
-        this.ambition = CONFIG.INITIAL_AMBITION_TEXT; // This might be an object later
+        this.ambition = CONFIG.INITIAL_AMBITION_TEXT;
 
+        // Initialize with "The Precipice" starting stats
         this.integrity = PLAYER_INITIAL_STATS.integrity;
-        this.maxIntegrity = PLAYER_INITIAL_STATS.maxIntegrity;
+        this.maxIntegrity = PLAYER_INITIAL_STATS.maxIntegrity; // Starts low, "Echo of a Name" will increase
         this.focus = PLAYER_INITIAL_STATS.focus;
-        this.maxFocus = PLAYER_INITIAL_STATS.maxFocus;
+        this.maxFocus = PLAYER_INITIAL_STATS.maxFocus; // Starts low
         this.clarity = PLAYER_INITIAL_STATS.clarity;
         this.maxClarity = PLAYER_INITIAL_STATS.maxClarity;
         this.hope = PLAYER_INITIAL_STATS.hope;
@@ -19,39 +18,53 @@ class Player {
         this.maxDespair = PLAYER_INITIAL_STATS.maxDespair;
         this.insight = PLAYER_INITIAL_STATS.insight;
 
-        this.attunements = { ...PLAYER_INITIAL_STATS.attunements }; // Shallow copy is fine for object of numbers
+        this.attunements = { ...PLAYER_INITIAL_STATS.attunements };
 
-        this.deck = []; // Array of card ID strings
-        this.hand = []; // Array of card ID strings
-        this.discardPile = []; // Array of card ID strings
-        this.traumaDeck = []; // Separate deck for Trauma cards, or mix them in
+        // Deck state for the intro
+        this.awakeningDeck = [...PLAYER_AWAKENING_DECK_CONTENTS]; // Special deck for intro draws
+        this.shuffleArray(this.awakeningDeck); // Shuffle the insights to be drawn
 
-        this.memories = []; // Array of Memory objects/IDs (Artifacts)
-        this.activePersonaStance = null; // Will hold a PersonaStance object from CONFIG
+        this.deck = [...PLAYER_INITIAL_DECK]; // Main deck starts empty or with very few cards
+        this.hand = [...PLAYER_INITIAL_AWAKENING_HAND]; // Starts with "Grasp for Awareness"
+        this.discardPile = [];
+        // Trauma cards will be added to discard/deck as they occur
 
-        this.initializeDeck();
-        // UIManager.updatePlayerStats(this.getUIData()); // Initial UI update would be triggered by main.js
+        this.memories = []; // Array of Memory objects (e.g., {id: "MEM_ID", name: "Locket", ...})
+        this.activePersonaStance = null;
     }
 
     // --- Deck Management ---
-    initializeDeck() {
-        this.deck = [...PLAYER_INITIAL_DECK]; // Copy from config
-        this.shuffleDeck();
-        // console.log("Player deck initialized:", this.deck);
-    }
-
-    shuffleDeck() {
-        for (let i = this.deck.length - 1; i > 0; i--) {
+    shuffleArray(array) { // Generic shuffle utility
+        for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+            [array[i], array[j]] = [array[j], array[i]];
         }
     }
 
-    drawCards(count, fromEncounterStart = false) {
+    // Special draw for "Grasp for Awareness" from the awakening sequence
+    drawFromAwakeningDeck() {
+        if (this.awakeningDeck.length > 0) {
+            if (this.hand.length >= CONFIG.MAX_HAND_SIZE) {
+                UIManager.addLogEntry("Hand is full. Cannot draw awakening insight.", "system_warning");
+                return null;
+            }
+            const cardId = this.awakeningDeck.pop();
+            if (cardId) {
+                this.hand.push(cardId);
+                UIManager.addLogEntry(`A flicker of insight: Drew "${CONCEPT_CARD_DEFINITIONS[cardId]?.name}".`, "discovery");
+                return cardId;
+            }
+        } else {
+            UIManager.addLogEntry("No more awakening insights to draw.", "system");
+        }
+        return null;
+    }
+
+    drawCards(count) { // Normal card draw from main deck
         const drawnCards = [];
         for (let i = 0; i < count; i++) {
             if (this.hand.length >= CONFIG.MAX_HAND_SIZE) {
-                UIManager.addLogEntry("Hand is full. Cannot draw more cards.", "system");
+                UIManager.addLogEntry("Hand is full. Cannot draw more cards.", "system_warning");
                 break;
             }
             if (this.deck.length === 0) {
@@ -60,10 +73,9 @@ class Player {
                     break;
                 }
                 UIManager.addLogEntry("Deck empty. Reshuffling discard pile into deck.", "system");
-                this.deck = [...this.discardPile];
+                this.discardPile.forEach(cardId => this.deck.push(cardId)); // Move all to deck
                 this.discardPile = [];
-                this.shuffleDeck();
-                // After reshuffle, check again if deck is empty (could happen if discard was also empty)
+                this.shuffleArray(this.deck);
                 if (this.deck.length === 0) {
                     UIManager.addLogEntry("No cards left after reshuffle.", "system");
                     break;
@@ -73,240 +85,326 @@ class Player {
             if (cardId) {
                 this.hand.push(cardId);
                 drawnCards.push(cardId);
-                 // If the drawn card is a Trauma with an onDraw effect
                 const cardDef = CONCEPT_CARD_DEFINITIONS[cardId];
                 if (cardDef && cardDef.type === "Trauma" && cardDef.onDrawFunctionName) {
-                    // In a real game, we'd call the function:
-                    // Game.executeCardEffect(cardDef.onDrawFunctionName, this, null, cardDef);
-                    UIManager.addLogEntry(`Trauma drawn: ${cardDef.name}. ${cardDef.description}`, "trauma");
+                    // Trigger onDraw effect via EncounterManager or main game loop
+                    // For now, just log. Game.executeCardOnDrawEffect(cardId, this);
+                    UIManager.addLogEntry(`Trauma drawn: ${cardDef.name}! Effect: ${cardDef.description}`, "trauma");
+                    // Automatically try to resolve it if possible (e.g. Disorientation costing Clarity)
+                    if (cardId === "TRM001" && this.clarity > 0) { // Specific to Disorientation
+                       // This logic should ideally be in the onDrawFunctionName itself via Game/EncounterMgr
+                       // UIManager.addLogEntry("You can spend 1 Clarity to negate Disorientation's effect this turn.", "choice_prompt");
+                       // For now, assume player choice or auto-spend if available for simplicity.
+                    }
+                } else if (cardDef) {
+                    UIManager.addLogEntry(`Drew: ${cardDef.name}.`, "system");
                 }
             }
         }
-        // UIManager.updatePlayerHand(this.getHandData()); // UI update responsibility of main game loop or encounter manager
-        // UIManager.updateDeckInfo(this.deck.length, this.discardPile.length, this.getTraumaCount());
-        return drawnCards; // Return drawn cards for potential immediate effects
+        return drawnCards;
     }
 
     playCardFromHand(cardId) {
         const cardIndex = this.hand.indexOf(cardId);
         if (cardIndex > -1) {
-            const playedCard = this.hand.splice(cardIndex, 1)[0];
-            this.discardPile.push(playedCard);
-            // Actual card effect logic will be in EncounterManager or a dedicated card effect handler
-            // UIManager.updatePlayerHand(this.getHandData());
-            // UIManager.updateDeckInfo(this.deck.length, this.discardPile.length, this.getTraumaCount());
-            return CONCEPT_CARD_DEFINITIONS[playedCard]; // Return card definition for processing
+            const cardDef = CONCEPT_CARD_DEFINITIONS[cardId];
+            if (!cardDef) {
+                console.error("Played card ID has no definition:", cardId);
+                return null;
+            }
+            if (this.focus < cardDef.cost) {
+                UIManager.addLogEntry(`Not enough Focus to play ${cardDef.name} (Cost: ${cardDef.cost}, Have: ${this.focus}).`, "warning");
+                return null;
+            }
+
+            this.modifyFocus(-cardDef.cost); // Spend focus before moving card
+            const playedCardId = this.hand.splice(cardIndex, 1)[0];
+
+            if (cardDef.type === "Trauma") {
+                // Traumas might go to a "resolved traumas" pile or just discard
+                this.discardPile.push(playedCardId);
+            } else {
+                this.discardPile.push(playedCardId);
+            }
+            return cardDef; // Return card definition for processing its effect
         }
         return null; // Card not found
     }
 
-    discardCard(cardId) {
+    discardCardFromHand(cardId) { // Discard without playing effect (e.g. from Aspect ability)
         const cardIndex = this.hand.indexOf(cardId);
         if (cardIndex > -1) {
-            const discardedCard = this.hand.splice(cardIndex, 1)[0];
-            this.discardPile.push(discardedCard);
-            UIManager.addLogEntry(`Discarded ${CONCEPT_CARD_DEFINITIONS[discardedCard]?.name || 'a card'}.`, "system");
-            return true;
+            const discardedCardId = this.hand.splice(cardIndex, 1)[0];
+            this.discardPile.push(discardedCardId);
+            UIManager.addLogEntry(`Discarded ${CONCEPT_CARD_DEFINITIONS[discardedCardId]?.name || 'a card'}.`, "system_negative");
+            return CONCEPT_CARD_DEFINITIONS[discardedCardId];
         }
-        return false;
+        return null;
     }
 
-    addCardToDeck(cardId, shuffleIn = false) {
+    addConceptToDeck(cardId, shuffleIn = false) { // For rewards, adding to main deck
         this.deck.push(cardId);
         if (shuffleIn) {
-            this.shuffleDeck();
+            this.shuffleArray(this.deck);
         }
-        UIManager.addLogEntry(`${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'A new concept'} added to your deck.`, "reward");
+        UIManager.addLogEntry(`${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'A new concept'} coalesces in your deck.`, "reward");
     }
 
-    addCardToDiscard(cardId) {
+    addConceptToDiscard(cardId) {
         this.discardPile.push(cardId);
-         UIManager.addLogEntry(`${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'A concept'} added to your discard pile.`, "system");
+         UIManager.addLogEntry(`${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'A concept'} manifests in your discard pile.`, "system");
     }
 
-    addCardToHand(cardId) {
+    addConceptToHand(cardId) {
         if (this.hand.length < CONFIG.MAX_HAND_SIZE) {
             this.hand.push(cardId);
-            UIManager.addLogEntry(`${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'A concept'} added to your hand.`, "system");
+            UIManager.addLogEntry(`${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'A concept'} appears in your hand.`, "system_positive");
         } else {
-            UIManager.addLogEntry(`Hand full, ${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'a concept'} added to discard instead.`, "system");
-            this.addCardToDiscard(cardId);
+            UIManager.addLogEntry(`Hand full, ${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'a concept'} added to discard instead.`, "system_warning");
+            this.addConceptToDiscard(cardId);
         }
     }
 
-
-    addTrauma(traumaCardId) {
-        // Decide whether traumas go into main deck, discard, or a separate pile
-        // For now, let's add to discard pile to be shuffled in later
+    addTraumaToDiscard(traumaCardId) { // Explicitly for adding Traumas
         this.discardPile.push(traumaCardId);
-        UIManager.addLogEntry(`A Trauma (${CONCEPT_CARD_DEFINITIONS[traumaCardId]?.name || 'Unknown Fear'}) has manifested in your discard pile!`, "trauma");
+        const traumaDef = CONCEPT_CARD_DEFINITIONS[traumaCardId];
+        UIManager.addLogEntry(`A Trauma (${traumaDef?.name || 'Unknown Fear'}) has formed in your discard pile!`, "trauma");
     }
 
-    removeCardFromDeck(cardId, fromAllPiles = true) { // More complex removal logic needed
-        let removed = false;
-        // Simplistic removal: remove first instance found
-        const deckIdx = this.deck.indexOf(cardId);
-        if (deckIdx > -1) {
-            this.deck.splice(deckIdx, 1);
-            removed = true;
-        } else if (fromAllPiles) {
-            const discardIdx = this.discardPile.indexOf(cardId);
-            if (discardIdx > -1) {
-                this.discardPile.splice(discardIdx, 1);
-                removed = true;
-            } else {
-                const handIdx = this.hand.indexOf(cardId);
-                if (handIdx > -1) {
-                    this.hand.splice(handIdx, 1);
-                    removed = true;
-                }
-            }
+    removeCardFromPsyche(cardId) { // Attempts to remove from hand, then discard, then deck
+        let found = false;
+        let pileName = "";
+        if (this.hand.includes(cardId)) {
+            this.hand.splice(this.hand.indexOf(cardId), 1);
+            found = true; pileName = "hand";
+        } else if (this.discardPile.includes(cardId)) {
+            this.discardPile.splice(this.discardPile.indexOf(cardId), 1);
+            found = true; pileName = "discard pile";
+        } else if (this.deck.includes(cardId)) {
+            this.deck.splice(this.deck.indexOf(cardId), 1);
+            found = true; pileName = "deck";
         }
-        if (removed) {
-            UIManager.addLogEntry(`Removed ${CONCEPT_CARD_DEFINITIONS[cardId]?.name || 'a concept'} from your psyche.`, "system");
+
+        if (found) {
+            UIManager.addLogEntry(`The Concept "${CONCEPT_CARD_DEFINITIONS[cardId]?.name}" fades from your ${pileName}.`, "system");
+        } else {
+            UIManager.addLogEntry(`Could not find "${CONCEPT_CARD_DEFINITIONS[cardId]?.name}" to remove.`, "warning");
         }
-        return removed;
+        return found;
     }
 
     // --- Stat & Resource Modification ---
-    modifyIntegrity(amount) {
+    // modifyIntegrity, modifyFocus, modifyClarity, modifyHope, modifyDespair, modifyInsight, modifyAttunement
+    // are largely the same but ensure logging reflects the game's tone.
+
+    modifyIntegrity(amount, source = "an unknown force") {
+        const prevIntegrity = this.integrity;
         this.integrity += amount;
         if (this.integrity > this.maxIntegrity) this.integrity = this.maxIntegrity;
         if (this.integrity < 0) this.integrity = 0;
-        // UIManager.updatePlayerStats(this.getUIData());
-        if (amount < 0) UIManager.addLogEntry(`Took ${-amount} Psychological Damage.`, "damage");
-        if (this.integrity === 0) {
-            // Game over logic would be handled by main.js
-            // UIManager.displayGameOver("Psychological Collapse!", "Your Integrity has shattered.");
+
+        if (amount < 0) UIManager.addLogEntry(`Your mind strains (${-amount} Integrity damage from ${source}).`, "damage");
+        else if (amount > 0 && this.integrity > prevIntegrity) UIManager.addLogEntry(`A measure of cohesion returns (+${amount} Integrity from ${source}).`, "system_positive");
+
+        if (this.integrity === 0 && prevIntegrity > 0) {
+            Game.triggerGameOver("Psychological Collapse", "Your Integrity has shattered. The Inner Sea claims you.");
         }
     }
 
-    modifyFocus(amount) {
+    modifyMaxIntegrity(newMax) {
+        this.maxIntegrity = Math.max(1, newMax); // Ensure max integrity is at least 1
+        if (this.integrity > this.maxIntegrity) {
+            this.integrity = this.maxIntegrity; // Cap current integrity if it exceeds new max
+        }
+        UIManager.addLogEntry(`Your capacity for psychological cohesion has changed. Max Integrity: ${this.maxIntegrity}.`, "system_positive");
+    }
+
+    modifyFocus(amount, source = "internal reserves") {
+        const prevFocus = this.focus;
         this.focus += amount;
         if (this.focus > this.maxFocus) this.focus = this.maxFocus;
         if (this.focus < 0) this.focus = 0;
-        // UIManager.updatePlayerStats(this.getUIData());
+        // Focus changes frequently, so less verbose logging unless significant
+        if (amount > 0 && this.focus > prevFocus) { /* UIManager.addLogEntry(`Focus regained.`, "system_subtle"); */ }
+        else if (amount < 0 && this.focus < prevFocus) { UIManager.addLogEntry(`Focus expended by ${source}.`, "system_subtle");}
+    }
+     modifyMaxFocus(newMax) {
+        this.maxFocus = Math.max(1, newMax);
+        if (this.focus > this.maxFocus) {
+            this.focus = this.maxFocus;
+        }
+        UIManager.addLogEntry(`Your mental energy capacity has shifted. Max Focus: ${this.maxFocus}.`, "system_positive");
     }
 
-    spendFocus(cost) {
+    spendFocusForCard(cost, cardName = "a Concept") { // Specific for card plays
         if (this.focus >= cost) {
-            this.focus -= cost;
-            // UIManager.updatePlayerStats(this.getUIData());
+            this.modifyFocus(-cost, `playing ${cardName}`);
             return true;
         }
-        UIManager.addLogEntry("Not enough Focus.", "error");
+        UIManager.addLogEntry(`Not enough Focus to manifest ${cardName}.`, "warning");
         return false;
     }
 
-    modifyClarity(amount) {
+    modifyClarity(amount, source = "the journey") {
+        const prevClarity = this.clarity;
         this.clarity += amount;
         if (this.clarity > this.maxClarity) this.clarity = this.maxClarity;
         if (this.clarity < 0) this.clarity = 0;
-        // UIManager.updatePlayerStats(this.getUIData());
-        if (this.clarity === 0) {
-            UIManager.addLogEntry("Clarity exhausted! Mental Fog sets in.", "warning");
-            // Trigger Mental Fog effects (e.g., Despair gain, negative events)
+
+        if (amount < 0) UIManager.addLogEntry(`The way forward blurs (-${-amount} Clarity from ${source}).`, "system_negative");
+        else if (amount > 0 && this.clarity > prevClarity) UIManager.addLogEntry(`A moment of lucidity (+${amount} Clarity from ${source}).`, "system_positive");
+
+        if (this.clarity === 0 && prevClarity > 0) {
+            UIManager.addLogEntry("Clarity exhausted! A thick Mental Fog descends, oppressive and disorienting.", "critical");
+            this.modifyDespair(2, "Mental Fog"); // Example effect of Mental Fog
+            // Game.triggerMentalFogEvent(); // Main game controller would handle this
         }
     }
 
-    modifyHope(amount) {
+    modifyHope(amount, source = "an unknown influence") {
+        const prevHope = this.hope;
         this.hope += amount;
         if (this.hope > this.maxHope) this.hope = this.maxHope;
         if (this.hope < 0) this.hope = 0;
-        // UIManager.updatePlayerStats(this.getUIData());
-    }
 
-    modifyDespair(amount) {
-        this.despair += amount;
-        if (this.despair > this.maxDespair) this.despair = this.maxDespair;
-        if (this.despair < 0) this.despair = 0;
-        // UIManager.updatePlayerStats(this.getUIData());
-        if (this.despair >= this.maxDespair) {
-             UIManager.addLogEntry("Despair has reached critical levels!", "critical");
-            // Trigger severe Despair effects
+        if (amount < 0) UIManager.addLogEntry(`A flicker of Hope gutters and fades (-${-amount} from ${source}).`, "system_negative");
+        else if (amount > 0 && this.hope > prevHope) UIManager.addLogEntry(`A fragile Hope glimmers anew (+${amount} from ${source}).`, "system_positive");
+
+        // Tarnished Locket check could be here or in a turn processing function in main.js
+        if (this.hope <= 1 && prevHope > 1 && this.memories.some(mem => mem.id === "MEM_TARNISHED_LOCKET")) {
+             UIManager.addLogEntry("The Tarnished Locket emits a faint, comforting warmth.", "artifact_effect");
+             // The actual +1 Hope would be applied at start of "day" or next major rest via game loop
         }
     }
 
-    modifyInsight(amount) {
-        this.insight += amount;
-        if (this.insight < 0) this.insight = 0; // Should not happen often
-        // UIManager.updatePlayerStats(this.getUIData()); // Insight might not be on main UI
-        if (amount > 0) UIManager.addLogEntry(`Gained ${amount} Insight.`, "reward");
+    modifyDespair(amount, source = "the encroaching void") {
+        const prevDespair = this.despair;
+        this.despair += amount;
+        if (this.despair > this.maxDespair) this.despair = this.maxDespair;
+        if (this.despair < 0) this.despair = 0;
+
+        if (amount > 0 && this.despair > prevDespair) UIManager.addLogEntry(`A cold Despair seeps in (+${amount} from ${source}).`, "system_negative");
+        else if (amount < 0) UIManager.addLogEntry(`The weight of Despair lessens slightly (-${-amount} from ${source}).`, "system_positive");
+
+        if (this.despair >= this.maxDespair && prevDespair < this.maxDespair) {
+             UIManager.addLogEntry("Despair has reached critical levels! The shadows writhe with unseen horrors.", "critical_system");
+             // Game.triggerCriticalDespairEvent();
+        } else if (this.despair > this.maxDespair * 0.7 && prevDespair <= this.maxDespair * 0.7) {
+             UIManager.addLogEntry("Despair grows heavy. The Inner Sea feels more oppressive.", "warning");
+        }
     }
 
-    modifyAttunement(attunementKey, amount) {
+    modifyInsight(amount, source = "an epiphany") {
+        this.insight += amount;
+        if (this.insight < 0) this.insight = 0;
+        if (amount > 0) UIManager.addLogEntry(`A flash of Insight illuminates your mind (+${amount} from ${source}).`, "reward");
+    }
+
+    modifyAttunement(attunementKey, amount, source = "an experience") {
         if (this.attunements.hasOwnProperty(attunementKey)) {
+            const prevValue = this.attunements[attunementKey];
             this.attunements[attunementKey] += amount;
-            // Add min/max caps for attunements if desired
             if (this.attunements[attunementKey] < 0) this.attunements[attunementKey] = 0;
-            // UIManager.updatePlayerStats(this.getUIData());
-            UIManager.addLogEntry(`${ATTUNEMENT_DEFINITIONS[attunementKey].name} ${amount > 0 ? 'increased' : 'decreased'} by ${Math.abs(amount)}.`, "system");
+            // Add max caps for attunements if desired (e.g., 10)
+            // if (this.attunements[attunementKey] > 10) this.attunements[attunementKey] = 10;
+
+            if (this.attunements[attunementKey] !== prevValue) {
+                 UIManager.addLogEntry(`Your approach to ${ATTUNEMENT_DEFINITIONS[attunementKey].name} shifts due to ${source} (${amount > 0 ? '+' : ''}${amount}).`, "system");
+            }
         }
     }
 
     // --- Memories (Artifacts) ---
-    addMemory(memoryObject) { // memoryObject from a definition
-        this.memories.push(memoryObject);
-        // Apply memory's passive effects if any (more complex logic)
-        UIManager.addLogEntry(`Acquired Memory: ${memoryObject.name}.`, "reward");
-        // UIManager.updateActiveMemories(this.memories);
+    addMemory(memoryId) {
+        const memoryDef = MEMORY_DEFINITIONS[memoryId];
+        if (memoryDef && !this.memories.some(mem => mem.id === memoryId)) {
+            this.memories.push({ ...memoryDef }); // Store a copy
+            UIManager.addLogEntry(`A forgotten Memory surfaces: "${memoryDef.name}".`, "reward");
+            // Apply immediate or passive effects if defined (complex part for main loop)
+            // e.g. if (memoryDef.onAcquireFunctionName) Game.executeMemoryEffect(memoryDef.onAcquireFunctionName, this);
+        } else if (this.memories.some(mem => mem.id === memoryId)) {
+            UIManager.addLogEntry(`You already possess the Memory: "${memoryDef.name}".`, "system");
+        } else {
+            UIManager.addLogEntry(`Failed to acquire unknown Memory: ${memoryId}.`, "error");
+        }
     }
 
     removeMemory(memoryId) {
         const memoryIndex = this.memories.findIndex(mem => mem.id === memoryId);
         if (memoryIndex > -1) {
             const removedMemory = this.memories.splice(memoryIndex, 1)[0];
-            // Remove memory's passive effects
-            UIManager.addLogEntry(`Lost Memory: ${removedMemory.name}.`, "system");
-            // UIManager.updateActiveMemories(this.memories);
+            UIManager.addLogEntry(`The Memory of "${removedMemory.name}" fades...`, "system_negative");
+            // Remove passive effects (complex part)
             return true;
         }
         return false;
     }
 
+    hasMemory(memoryId) {
+        return this.memories.some(mem => mem.id === memoryId);
+    }
+
     // --- Persona Stance ---
     setPersonaStance(stanceId) {
-        if (PERSONA_STANCE_DEFINITIONS[stanceId]) {
-            this.activePersonaStance = PERSONA_STANCE_DEFINITIONS[stanceId];
-            UIManager.addLogEntry(`Adopted ${this.activePersonaStance.name}.`, "system");
-            // Apply stance modifiers (handled by encounter manager or main game loop)
-        } else if (stanceId === null) {
+        if (stanceId === null) {
+            if (this.activePersonaStance) {
+                UIManager.addLogEntry(`You release the ${this.activePersonaStance.name}, returning to a neutral mindset.`, "system");
+            }
             this.activePersonaStance = null;
-            UIManager.addLogEntry(`Returned to a neutral stance.`, "system");
+            return;
+        }
+        const stanceDef = PERSONA_STANCE_DEFINITIONS[stanceId];
+        if (stanceDef) {
+            // Check requirements (Attunements)
+            let canAdopt = true;
+            if (stanceDef.attunementReq) {
+                for (const attKey in stanceDef.attunementReq) {
+                    if (this.attunements[attKey] < stanceDef.attunementReq[attKey]) {
+                        canAdopt = false;
+                        UIManager.addLogEntry(`Cannot adopt ${stanceDef.name}: requires ${ATTUNEMENT_DEFINITIONS[attKey].name} ${stanceDef.attunementReq[attKey]}. You have ${this.attunements[attKey]}.`, "warning");
+                        break;
+                    }
+                }
+            }
+            if (canAdopt) {
+                this.activePersonaStance = { ...stanceDef };
+                UIManager.addLogEntry(`You adopt the ${this.activePersonaStance.name}.`, "system_positive");
+            }
+        } else {
+            UIManager.addLogEntry(`Unknown Persona Stance ID: ${stanceId}`, "error");
         }
     }
 
     // --- Utility / Data Getters ---
     getUIData() {
-        // Consolidate data needed for UIManager.updatePlayerStats
         return {
             integrity: this.integrity, maxIntegrity: this.maxIntegrity,
             focus: this.focus, maxFocus: this.maxFocus,
             clarity: this.clarity, maxClarity: this.maxClarity,
             hope: this.hope, maxHope: this.maxHope,
             despair: this.despair, maxDespair: this.maxDespair,
-            attunements: this.attunements
-            // Insight might be displayed elsewhere or not constantly
+            attunements: this.attunements,
+            // Not including insight here, might be displayed differently
         };
     }
 
-    getHandCardData() {
-        // Returns array of full card definition objects for cards in hand
+    getHandCardDefinitions() {
         return this.hand.map(cardId => CONCEPT_CARD_DEFINITIONS[cardId]).filter(Boolean);
     }
 
-    getFullDeckListData() {
-        // Returns array of full card definition objects for all cards owned
-        const allCards = [...this.deck, ...this.hand, ...this.discardPile];
-        return allCards.map(cardId => CONCEPT_CARD_DEFINITIONS[cardId]).filter(Boolean);
+    getFullDeckCardDefinitions() {
+        const allCardIds = [...this.deck, ...this.hand, ...this.discardPile];
+        // Filter out awakening deck if it's considered separate after initial draws
+        return allCardIds.map(cardId => CONCEPT_CARD_DEFINITIONS[cardId]).filter(Boolean);
     }
 
-    getTraumaCount() {
+    getTraumaCountInPlay() { // Counts traumas in hand, deck, discard
         let count = 0;
-        const checkPiles = [this.deck, this.hand, this.discardPile];
-        checkPiles.forEach(pile => {
+        const pilesToScan = [this.deck, this.hand, this.discardPile];
+        pilesToScan.forEach(pile => {
             pile.forEach(cardId => {
-                if (CONCEPT_CARD_DEFINITIONS[cardId] && CONCEPT_CARD_DEFINITIONS[cardId].type === "Trauma") {
+                const cardDef = CONCEPT_CARD_DEFINITIONS[cardId];
+                if (cardDef && cardDef.type === "Trauma") {
                     count++;
                 }
             });
@@ -314,7 +412,11 @@ class Player {
         return count;
     }
 
-    resetForNewRun() { // Or for game over
+    // --- Game State Transitions ---
+    resetForNewRun() {
+        this.name = CONFIG.INITIAL_PSYCHONAUT_NAME; // Or allow naming
+        this.ambition = CONFIG.INITIAL_AMBITION_TEXT; // Or allow choice
+
         this.integrity = PLAYER_INITIAL_STATS.integrity;
         this.maxIntegrity = PLAYER_INITIAL_STATS.maxIntegrity;
         this.focus = PLAYER_INITIAL_STATS.focus;
@@ -324,36 +426,49 @@ class Player {
         this.hope = PLAYER_INITIAL_STATS.hope;
         this.maxHope = PLAYER_INITIAL_STATS.maxHope;
         this.despair = PLAYER_INITIAL_STATS.despair;
-        // Keep Insight for meta-progression, or reset per run based on design
-        // this.insight = 0; // Reset if insight is per-run only
+        // this.insight = 0; // Reset run-specific insight, keep meta-insight if any
         this.attunements = { ...PLAYER_INITIAL_STATS.attunements };
-        this.hand = [];
+
+        this.awakeningDeck = [...PLAYER_AWAKENING_DECK_CONTENTS];
+        this.shuffleArray(this.awakeningDeck);
+        this.deck = [...PLAYER_INITIAL_DECK]; // Should be empty
+        this.hand = [...PLAYER_INITIAL_AWAKENING_HAND]; // Start with Grasp
         this.discardPile = [];
-        this.traumaDeck = [];
-        this.memories = []; // Or carry over some based on legacy
+
+        this.memories = []; // Or carry over some via Legacy
         this.activePersonaStance = null;
-        this.initializeDeck(); // Get a fresh starting deck
     }
 
-    // Called at the start of an encounter
-    prepareForEncounter() {
-        // For now, just ensure hand is clear, draw initial cards
-        // More complex logic for encounter start effects from memories/stances could go here
-        this.discardPile = [...this.discardPile, ...this.hand]; // Move hand to discard
+    prepareForEncounter() { // Called by EncounterManager
+        // Move existing hand to discard (if any, shouldn't be if coming from map)
+        this.discardPile.push(...this.hand);
         this.hand = [];
-        this.drawCards(CONFIG.INITIAL_CARD_DRAW_ENCOUNTER, true);
+        // Encounter draw is handled by EncounterManager calling startTurnInEncounter which calls drawCards
+        // Or specific encounter start draw logic here.
+        // For now, EncounterManager's startTurn will handle initial draw.
+        this.setPersonaStance(this.activePersonaStance ? this.activePersonaStance.id : "OBSERVER"); // Default to Observer if no stance
     }
 
-    // Called at the start of a player's turn in an encounter
-    startTurnInEncounter() {
-        this.modifyFocus(this.maxFocus); // Full focus regen for simplicity, or could be a base amount
-        // Apply stance-based focus regen if any
+    startTurnInEncounter() { // Called by EncounterManager
+        // Regenerate Focus
+        let focusRegen = this.maxFocus; // Full regen for simplicity
         if (this.activePersonaStance && this.activePersonaStance.modifiers && this.activePersonaStance.modifiers.focusRegenBonus) {
-            this.modifyFocus(this.activePersonaStance.modifiers.focusRegenBonus);
+            focusRegen += this.activePersonaStance.modifiers.focusRegenBonus;
         }
+        this.modifyFocus(focusRegen, "start of turn");
+
+        // Draw cards
         this.drawCards(CONFIG.TURN_START_CARD_DRAW);
+
+        // Other start-of-turn effects (from Memories, Stance, Aspect states on player)
+        // Example: Tarnished Locket (this is a "new day" tick for the locket)
+        if (this.hope <= 1 && this.memories.some(mem => mem.id === "MEM_TARNISHED_LOCKET")) {
+             // Check if already applied this "day" to prevent multiple triggers if hope fluctuates
+            if (!this.tarnishedLocketHopeAppliedThisTurn) { // Add this flag to player object if needed
+                this.modifyHope(1, "Tarnished Locket");
+                // this.tarnishedLocketHopeAppliedThisTurn = true; // Set flag
+            }
+        }
+        // else { this.tarnishedLocketHopeAppliedThisTurn = false; } // Reset flag
     }
 }
-
-// We will create an instance of this player in main.js
-// let GamePlayer = new Player();

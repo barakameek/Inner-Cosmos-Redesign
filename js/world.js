@@ -14,11 +14,11 @@ const World = (() => { // IIFE for a module-like structure
 
         if (Object.keys(allNodes).length === 0) {
             console.error("CRITICAL: No map nodes loaded from NODE_MAP_DATA in config.js!");
-            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) { // Check if UIManager is available
+            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
                 UIManager.addLogEntry("FATAL ERROR: The Inner Sea's geography is undefined!", "critical_system");
             }
         } else {
-            console.log("World (v2 Awakening) initialized with node map data. Player position to be set by Game sequence.");
+            console.log("World (v2 Awakening - Full) initialized with node map data. Player position to be set by Game sequence.");
         }
     }
 
@@ -28,18 +28,15 @@ const World = (() => { // IIFE for a module-like structure
             for (const nodeId in NODE_MAP_DATA) {
                 if (NODE_MAP_DATA.hasOwnProperty(nodeId)) {
                     allNodes[nodeId] = { ...NODE_MAP_DATA[nodeId] };
-                    // Ensure connections is an array and make a copy
                     allNodes[nodeId].connections = Array.isArray(allNodes[nodeId].connections) ? [...allNodes[nodeId].connections] : [];
-                    // Add reference to location data if this node is also a detailed location
-                    if (LOCATION_DATA_MINIMAL && LOCATION_DATA_MINIMAL[nodeId]) {
+                    if (LOCATION_DATA_MINIMAL && LOCATION_DATA_MINIMAL[nodeId]) { 
                         allNodes[nodeId].locationDetails = { ...LOCATION_DATA_MINIMAL[nodeId] };
                     }
                 }
             }
-            // Ensure all connected nodes exist in allNodes, creating placeholders if not fully defined
             for (const nodeId in allNodes) {
                 const node = allNodes[nodeId];
-                if(node.connections && Array.isArray(node.connections)) { // Check if connections exist and is an array
+                if(node.connections && Array.isArray(node.connections)) { 
                     node.connections.forEach(connectedNodeId => {
                         if (!allNodes[connectedNodeId]) {
                             console.warn(`Node "${connectedNodeId}" (connected from "${nodeId}") not found in NODE_MAP_DATA. Creating placeholder.`);
@@ -47,7 +44,7 @@ const World = (() => { // IIFE for a module-like structure
                                 id: connectedNodeId,
                                 name: connectedNodeId.replace(/_/g, ' ').replace("NODE ", "").replace(/\b\w/g, l => l.toUpperCase()),
                                 shortDesc: "An uncharted echo...",
-                                position: { x: Math.random() * 80 + 10, y: Math.random() * 80 + 10 }, // Random placeholder position
+                                position: { x: Math.random() * 80 + 10, y: Math.random() * 80 + 10 }, 
                                 storyletOnArrival: null,
                                 connections: [],
                                 type: "Unknown"

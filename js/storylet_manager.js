@@ -10,7 +10,7 @@ const StoryletManager = (() => {
     function init(player, world) {
         currentPlayerRef = player;
         currentWorldRef = world;
-        console.log("StoryletManager (v2 Awakening) initialized.");
+        console.log("StoryletManager (v2 Awakening) initialized with debug.");
     }
 
     function startStorylet(storyletId) {
@@ -62,7 +62,7 @@ const StoryletManager = (() => {
         }
         if(UIManager) UIManager.addLogEntry(`Chose: "${chosenOption.text}"`, "choice");
         
-        // DEBUG LOG:
+        // DEBUG LOG: Player hand before outcome
         console.log("Player hand JUST BEFORE outcome function is called in makeChoice:", JSON.stringify(currentPlayerRef.hand));
 
         if (chosenOption.outcomeFunctionName && typeof storyletOutcomes[chosenOption.outcomeFunctionName] === 'function') {
@@ -92,19 +92,19 @@ const StoryletManager = (() => {
         outcomePlayGraspForAwarenessShore: (params) => {
             const graspCardId = "AWK001";
             
-            // DEBUG LOG:
+            // DEBUG LOG: Player hand at the very start of this specific outcome
             console.log("Player hand at VERY START of outcomePlayGraspForAwarenessShore:", JSON.stringify(currentPlayerRef.hand));
 
             if (currentPlayerRef.hand.includes(graspCardId)) {
                 const cardDef = CONCEPT_CARD_DEFINITIONS[graspCardId]; 
-                const playedCardDef = currentPlayerRef.playCardFromHand(graspCardId); // This removes it from hand
+                const playedCardDef = currentPlayerRef.playCardFromHand(graspCardId); 
 
-                if (playedCardDef) { // playCardFromHand returns the cardDef if successful
+                if (playedCardDef) { 
                     if(UIManager) UIManager.addLogEntry(`You instinctively ${playedCardDef.name.toLowerCase()}.`, "player_action_major");
                     
                     const graspEffectFn = (typeof EncounterManager !== 'undefined') ? EncounterManager.getConceptCardEffectFunction(playedCardDef.effectFunctionName) : null;
                     if (graspEffectFn) { 
-                        graspEffectFn(playedCardDef); // This draws AWK002 from awakeningDeck to hand
+                        graspEffectFn(playedCardDef); 
                     } else { 
                         console.error("Effect function for Grasp for Awareness not found in EncounterManager's exports."); 
                         if(UIManager) UIManager.addLogEntry("The impulse yields nothing but deeper confusion.", "system_negative");
@@ -113,7 +113,6 @@ const StoryletManager = (() => {
                     if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI();
                     endStorylet("A sliver of awareness cuts through the fog. The world sharpens slightly.");
                 } else { 
-                    // This path means Player.playCardFromHand returned null (e.g. card not found there, which should not happen if includes() passed)
                     if(UIManager) UIManager.addLogEntry("Could not manifest the 'Grasp for Awareness' (playCardFromHand failed).", "error");
                     console.error("playCardFromHand failed for AWK001 even after hand.includes check passed. Hand:", JSON.stringify(currentPlayerRef.hand));
                     endStorylet("The fog remains thick."); 
@@ -124,7 +123,6 @@ const StoryletManager = (() => {
                 endStorylet("Adrift in confusion."); 
             }
         },
-        // ... (Rest of the outcome functions are identical to the last full StoryletManager output) ...
         outcomeSiftWreckage: (params) => { if (!currentPlayerRef.spendFocusForCard(1, "sifting wreckage")) { endStorylet("Lacking focus, the debris remains a jumble."); return; } currentPlayerRef.addMemory("MEM_TARNISHED_LOCKET"); currentPlayerRef.modifyHope(1, "finding the locket"); if(UIManager) UIManager.addJournalEntry("A Glimmer of the Past", "Amidst shattered thoughts, I found a Tarnished Locket. It feels... important."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("You find a small, tarnished locket in the debris."); },
         outcomeListenWhisperWreckage: (params) => { if(UIManager) UIManager.addLogEntry("The whisper intensifies, 'YOU SHOULD NOT BE HERE!' A shard of doubt takes form!", "critical"); if(Game && Game.queueEncounter) Game.queueEncounter("ASP_LINGERING_DOUBT"); endStorylet("The whispers coalesce into a menacing presence."); },
         outcomeLeaveWreckage: (params) => { currentPlayerRef.modifyDespair(1, "fleeing the wreckage"); if(UIManager) UIManager.addJournalEntry("Unease", "The Wreckage of a Thought felt deeply unsettling. I chose not to linger."); if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI(); endStorylet("You back away from the unsettling wreckage."); },

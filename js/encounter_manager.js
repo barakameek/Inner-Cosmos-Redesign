@@ -1,292 +1,270 @@
 // js/encounter_manager.js
 
-const EncounterManager = (() => { // IIFE for a module-like structure
+const EncounterManager = (() => {
 
     let isActive = false;
-    let currentPlayerRef = null; // Reference to the main Player object
-    let currentAspect = null; // Object holding the current Aspect's data and state
+    let currentPlayerRef = null;
+    let currentAspect = null; // Live instance of the Aspect
 
-    // Temporary state for player during encounter (e.g. encounter-specific composure)
     let playerEncounterState = {
-        composure: 0, // Player's temporary block for this encounter
-        // other encounter-specific states
+        composure: 0,
+        // flags for per-turn effects, e.g., disorientationClaritySpentThisTurn
     };
+
+    // To store the view to return to after encounter (map, location)
+    // This should ideally be managed by main.js's game state
+    let viewToReturnTo = 'map-view';
 
     function init(player) {
         currentPlayerRef = player;
         console.log("EncounterManager initialized.");
     }
 
-    function startEncounter(aspectId) {
-        if (!ASPECT_TEMPLATES[aspectId]) {
-            UIManager.addLogEntry(`Error: Aspect template ID "${aspectId}" not found.`, "error");
-            console.error(`Aspect template ID "${aspectId}" not found.`);
+    function startEncounter(aspectId, previousViewId = 'map-view') {
+        const aspectTemplate = ASPECT_TEMPLATES[aspectId];
+        if (!aspectTemplate) {
+            UIManager.addLogEntry(`Error: Aspect template ID "${aspectId}" not found. Cannot start encounter.`, "error");
             return false;
         }
         isActive = true;
+        viewToReturnTo = previousViewId; // Store where to return
 
-        // Create a live instance of the Aspect from its template
-        const template = ASPECT_TEMPLATES[aspectId];
         currentAspect = {
-            id: template.id,
-            name: template.name,
-            resolve: template.baseResolve,
-            maxResolve: template.baseResolve,
-            composure: template.baseComposure,
-            maxComposureCap: template.baseComposure + 20, // Example cap
+            id: aspectTemplate.id,
+            name: aspectTemplate.name,
+            resolve: aspectTemplate.baseResolve,
+            maxResolve: aspectTemplate.baseResolve,
+            composure: aspectTemplate.baseComposure,
+            maxComposureCap: aspectTemplate.baseComposure + (aspectTemplate.maxResolve / 2) || 20, // Dynamic cap
             resonance: 0,
-            resonanceGoal: template.resonanceGoal,
+            resonanceGoal: aspectTemplate.resonanceGoal,
             dissonance: 0,
-            dissonanceThreshold: template.dissonanceThreshold,
-            visibleTraits: JSON.parse(JSON.stringify(template.visibleTraits || [])),
-            hiddenTraits: JSON.parse(JSON.stringify(template.hiddenTraits || [])),
-            revealedTraits: [], // Store names of revealed hidden traits
-            intents: template.intents.map(intent => ({ ...intent })), // Deep copy intents with their functions
+            dissonanceThreshold: aspectTemplate.dissonanceThreshold,
+            visibleTraits: JSON.parse(JSON.stringify(aspectTemplate.visibleTraits || [])),
+            hiddenTraits: JSON.parse(JSON.stringify(aspectTemplate.hiddenTraits || [])),
+            revealedTraits: [],
+            intents: (aspectTemplate.intents || []).map(intent => ({ ...intent })),
             currentIntent: null,
-            states: [], // { name, duration, data }
-            tookPressureThisTurn: false, // For traits like Grudge Holder
-            rewards: { ...template.rewards }
+            states: [],
+            tookPressureThisTurn: false,
+            rewards: { ...(aspectTemplate.rewards || {}) },
+            turnCount: 0 // For timed effects like Lingering Doubt's fade
         };
 
-        // Prepare player for encounter (draws hand, etc.)
-        currentPlayerRef.prepareForEncounter();
+        currentPlayerRef.prepareForEncounter(); // Sets up stance (default Observer), clears hand
         playerEncounterState.composure = 0; // Reset player's encounter composure
+        playerEncounterState.disorientationClaritySpentThisTurn = false; // Reset flag
 
-        // Choose Aspect's first intent
         _chooseAspectIntent();
 
-        UIManager.addLogEntry(`Encounter started with ${currentAspect.name}!`, "critical");
-        UIManager.displayEncounterView(currentAspect, currentPlayerRef); // Initial UI update
-        UIManager.updatePlayerHand(currentPlayerRef.getHandCardData());
-        _updateEncounterPlayerStatus(); // For player's encounter-specific stats
-
-        // Start player's turn
-        _startPlayerTurn();
+        UIManager.addLogEntry(`Encounter begins: ${currentAspect.name} materializes!`, "critical");
+        UIManager.displayEncounterView(currentAspect, currentPlayerRef, playerEncounterState);
+        // Player's turn starts, which includes drawing cards
+        _startPlayerTurn(); // This will also update hand UI
         return true;
     }
 
-    function endEncounter(outcome) { // outcome: "player_win_resolve", "player_win_resonance", "player_flee", "aspect_win"
+    function endEncounter(outcome) {
         isActive = false;
-        UIManager.addLogEntry(`Encounter with ${currentAspect.name} ended. Outcome: ${outcome}`, "system");
+        UIManager.addLogEntry(`Encounter with ${currentAspect.name} concludes. Outcome: ${outcome}.`, "system");
 
-        // Handle rewards or consequences based on outcome
         switch (outcome) {
             case "player_win_resolve":
             case "player_win_resonance":
-                UIManager.addLogEntry(`You achieved ${outcome === 'player_win_resolve' ? 'Understanding' : 'Integration'}!`, "reward");
+                const victoryType = outcome === 'player_win_resolve' ? 'Understanding' : 'Integration';
+                UIManager.addLogEntry(`You achieved ${victoryType} with ${currentAspect.name}!`, "reward_major");
                 if (currentAspect.rewards) {
                     if (currentAspect.rewards.insight) {
-                        currentPlayerRef.modifyInsight(currentAspect.rewards.insight);
+                        currentPlayerRef.modifyInsight(currentAspect.rewards.insight, `resolving ${currentAspect.name}`);
                     }
-                    // Grant concept card rewards (simplified)
                     if (currentAspect.rewards.conceptPool && currentAspect.rewards.conceptPool.length > 0) {
-                        const randomCardId = currentAspect.rewards.conceptPool[Math.floor(Math.random() * currentAspect.rewards.conceptPool.length)];
-                        // This should present a choice to the player in a real game
-                        UIManager.addLogEntry(`You sense a new Concept: ${CONCEPT_CARD_DEFINITIONS[randomCardId]?.name || randomCardId}`, "reward");
-                        // For now, auto-add to deck
-                        currentPlayerRef.addCardToDeck(randomCardId, true);
+                        const cardId = currentAspect.rewards.conceptPool[Math.floor(Math.random() * currentAspect.rewards.conceptPool.length)];
+                        // TODO: Implement card choice screen via UIManager and Game
+                        UIManager.addLogEntry(`A new understanding forms: "${CONCEPT_CARD_DEFINITIONS[cardId]?.name}".`, "reward");
+                        currentPlayerRef.addConceptToDeck(cardId, true);
                     }
-                    // Grant memory/artifact (simplified)
-                     if (currentAspect.rewards.memoryPool && currentAspect.rewards.memoryPool.length > 0) {
-                        const randomMemoryId = currentAspect.rewards.memoryPool[Math.floor(Math.random() * currentAspect.rewards.memoryPool.length)];
-                        // Game.addMemoryToPlayer(randomMemoryId); // Needs memory definitions
-                        UIManager.addLogEntry(`A new Memory resonates: ${randomMemoryId}`, "reward");
+                    if (currentAspect.rewards.memoryPool && currentAspect.rewards.memoryPool.length > 0) {
+                        const memoryId = currentAspect.rewards.memoryPool[Math.floor(Math.random() * currentAspect.rewards.memoryPool.length)];
+                        currentPlayerRef.addMemory(memoryId); // Player.addMemory logs its own message
                     }
                 }
                 break;
-            case "player_flee":
-                UIManager.addLogEntry("You managed to disengage from the Aspect.", "system");
-                // Apply penalties for fleeing (e.g., lose Clarity, gain Despair)
-                currentPlayerRef.modifyClarity(-2); // Example penalty
-                currentPlayerRef.modifyDespair(1);
+            case "player_flee": // Not implemented yet, but for future
+                UIManager.addLogEntry("You disengage from the psychic fray.", "system");
+                currentPlayerRef.modifyClarity(-2, "fleeing encounter");
+                currentPlayerRef.modifyDespair(1, "unresolved encounter");
                 break;
             case "aspect_win": // Player Integrity reached 0
-                UIManager.addLogEntry(`${currentAspect.name} overwhelmed your psyche.`, "critical");
-                // Game over logic is handled by main.js by checking player Integrity
+                UIManager.addLogEntry(`${currentAspect.name} has overwhelmed your psyche.`, "critical_system");
+                // Game.triggerGameOver is called by Player.modifyIntegrity
+                break;
+            case "aspect_fled":
+                UIManager.addLogEntry(`${currentAspect.name} faded before resolution. An unsettling enigma remains.`, "system_negative");
+                currentPlayerRef.modifyDespair(1, `${currentAspect.name} disengaged`);
                 break;
         }
 
         currentAspect = null;
-        playerEncounterState.composure = 0;
+        playerEncounterState = { composure: 0 }; // Reset state
 
-        // Return to the previous view (map or location) - main.js orchestrates this
-        // UIManager.showView(UIManager.getDOMElement('mapView')); // Simplification
-        Game.returnFromEncounter(); // Notify main game loop
+        Game.returnFromEncounter(viewToReturnTo); // Notify main game loop to switch view
     }
 
     function _startPlayerTurn() {
-        if (!isActive) return;
+        if (!isActive || !currentAspect) return;
         UIManager.addLogEntry("--- Your Turn ---", "turn");
-        currentPlayerRef.startTurnInEncounter(); // Regenerate focus, draw card
+        playerEncounterState.disorientationClaritySpentThisTurn = false; // Reset for Disorientation
+        currentPlayerRef.startTurnInEncounter(); // Regen focus, draw card (which might trigger onDraw for Disorientation)
 
-        // Apply player's start-of-turn effects from Stances/Memories (if any)
-        // ...
-
-        // Update UI
-        UIManager.updatePlayerHand(currentPlayerRef.getHandCardData());
-        _updateEncounterPlayerStatus();
+        // Update UI for player stats, hand, and Aspect's (potentially new) intent
+        _updateEncounterUIDisplay();
         UIManager.getDOMElement('endTurnEncounterButton').disabled = false;
-        UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1); // Example cost for reveal
+        UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0);
     }
 
     function _endPlayerTurn() {
-        if (!isActive) return;
-        UIManager.addLogEntry("Player ends turn.", "system");
+        if (!isActive || !currentAspect) return;
+        UIManager.addLogEntry("You steady your thoughts, ending your turn.", "system");
         UIManager.getDOMElement('endTurnEncounterButton').disabled = true;
-        // Disable card playability visually if needed
-
-        // Apply end-of-player-turn effects (e.g., expire temporary player states)
-        // ...
-
         _startAspectTurn();
     }
 
     function _startAspectTurn() {
-        if (!isActive) return;
-        UIManager.addLogEntry(`--- ${currentAspect.name}'s Turn ---`, "turn");
+        if (!isActive || !currentAspect) return;
+        currentAspect.turnCount++;
+        UIManager.addLogEntry(`--- ${currentAspect.name}'s Turn (${currentAspect.turnCount}) ---`, "turn");
 
-        // Aspect's pre-action phase (e.g., "Grudge Holder" trait)
         if (currentAspect.tookPressureThisTurn && currentAspect.visibleTraits.some(t => t.name.includes("Grudge Holder"))) {
             _gainAspectComposure(1, "Grudge Holder Trait");
         }
         currentAspect.tookPressureThisTurn = false;
-
-        // Decrement duration of Aspect states
         _updateAspectStates();
 
-
-        // Execute Aspect's current Intent
         if (currentAspect.currentIntent && typeof aspectIntentEffects[currentAspect.currentIntent.functionName] === 'function') {
             UIManager.addLogEntry(`${currentAspect.name} intends: ${currentAspect.currentIntent.description}`, "intent");
             aspectIntentEffects[currentAspect.currentIntent.functionName](currentAspect.currentIntent.params || {});
         } else {
-            UIManager.addLogEntry(`${currentAspect.name} seems hesitant and does nothing.`, "system");
+            UIManager.addLogEntry(`${currentAspect.name} hesitates.`, "system");
         }
 
-        _checkEncounterWinLoss(); // Check after Aspect action
-        if (!isActive) return; // Encounter might have ended
+        if (_checkEncounterWinLoss()) return; // Encounter might have ended
 
-        // Choose next Intent
         _chooseAspectIntent();
+        _updateEncounterUIDisplay(); // Update Aspect UI (new intent, stats)
 
-        // Update UI for Aspect state
-        UIManager.displayEncounterView(currentAspect, currentPlayerRef); // Update Aspect's part of UI
-
-        // If encounter still active, start player's next turn
-        setTimeout(() => { // Add a slight delay for readability
-            if (isActive) _startPlayerTurn();
-        }, 700);
+        if (isActive) { // Check again, Aspect action might have ended encounter
+            setTimeout(() => { if (isActive) _startPlayerTurn(); }, 800);
+        }
     }
 
     function playConceptCard(cardId) {
         if (!isActive || !currentPlayerRef || !currentAspect) return;
-
         const cardDef = CONCEPT_CARD_DEFINITIONS[cardId];
-        if (!cardDef) {
-            UIManager.addLogEntry(`Error: Concept card ID "${cardId}" not found.`, "error");
-            return;
+        if (!cardDef) return;
+
+        // Check if Disorientation is making it more expensive
+        let actualCost = cardDef.cost;
+        const disorientationInHand = currentPlayerRef.hand.find(id => id === "TRM001");
+        if (disorientationInHand && !playerEncounterState.disorientationClaritySpentThisTurn) {
+            actualCost += 1;
         }
 
-        if (!currentPlayerRef.spendFocus(cardDef.cost)) {
-            UIManager.addLogEntry(`Not enough Focus to play ${cardDef.name}.`, "warning");
-            return;
-        }
+        if (!currentPlayerRef.spendFocusForCard(actualCost, cardDef.name)) return; // spendFocusForCard logs if not enough focus
 
         currentPlayerRef.playCardFromHand(cardId); // Moves card from hand to discard
         UIManager.addLogEntry(`Played ${cardDef.name}.`, "player_action");
 
-        // Execute card effect
-        // This is where a more robust effect system would come in.
-        // For now, direct calls or a simple mapping.
         if (cardDef.effectFunctionName && typeof conceptCardEffects[cardDef.effectFunctionName] === 'function') {
             conceptCardEffects[cardDef.effectFunctionName](cardDef);
         } else {
-            UIManager.addLogEntry(`Effect for ${cardDef.name} not implemented.`, "error");
+            UIManager.addLogEntry(`Effect for ${cardDef.name} not yet defined.`, "error");
         }
 
-        // Check for "Lashes Out When Cornered" type traits
-        if (currentAspect.resolve < (currentAspect.maxResolve * 0.4) && // e.g., below 40%
-            currentAspect.hiddenTraits.some(t => t.name.includes("Lashes Out") && currentAspect.revealedTraits.includes(t.name)) &&
-            cardDef.keywords.includes("#Challenge")) {
-            UIManager.addLogEntry(`TRAIT TRIGGER: ${currentAspect.name} 'Lashes Out When Cornered'!`, "critical");
-            // Immediately execute a retaliatory intent
-            const lashOutIntent = currentAspect.intents.find(intent => intent.name.includes("Jab") || intent.name.includes("Lash"));
-            if (lashOutIntent && typeof aspectIntentEffects[lashOutIntent.functionName] === 'function') {
-                 aspectIntentEffects[lashOutIntent.functionName](lashOutIntent.params || {});
-            }
-            // Could also apply a temporary "Enraged" state to the Aspect
+        // Post-play checks (e.g., "Lashes Out" traits, Aspect "Feeds on Negativity")
+        if (cardDef.keywords.includes("#DissonanceSource") && currentAspect.visibleTraits.some(t => t.name.includes("Feeds on Negativity"))) {
+            UIManager.addLogEntry(`${currentAspect.name} seems to draw strength from the dissonance!`, "aspect_action_subtle");
+            _gainAspectComposure(1, "Feeds on Negativity");
         }
 
+        _updateEncounterUIDisplay();
+        if (_checkEncounterWinLoss()) return;
 
-        UIManager.updatePlayerHand(currentPlayerRef.getHandCardData());
-        _updateEncounterPlayerStatus();
-        UIManager.displayEncounterView(currentAspect, currentPlayerRef); // Update Aspect UI after effect
-
-        _checkEncounterWinLoss(); // Check if playing the card won/lost
+        // Enable/disable reveal trait button based on insight
+        UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0);
     }
 
-    function _updateEncounterPlayerStatus() {
-        // For UI elements specific to player in encounter view
-        UIManager.getDOMElement('playerFocusEncounter').textContent = `${currentPlayerRef.focus}/${currentPlayerRef.maxFocus}`;
-        UIManager.getDOMElement('playerIntegrityEncounter').textContent = `${currentPlayerRef.integrity}/${currentPlayerRef.maxIntegrity}`;
-        // Update player composure display if we implement it:
-        // UIManager.getDOMElement('playerComposureEncounter').textContent = playerEncounterState.composure;
+    function _getUnrevealedTraitCount() {
+        if (!currentAspect) return 0;
+        return currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name)).length;
+    }
+
+    function _updateEncounterUIDisplay() {
+        if (!isActive || !currentAspect || !currentPlayerRef) return;
+        UIManager.displayEncounterView(currentAspect, currentPlayerRef, playerEncounterState);
+        UIManager.updatePlayerHand(currentPlayerRef.getHandCardDefinitions()); // Use definitions for full data
     }
 
     // --- Aspect Logic Helpers ---
-    function _applyPressureToAspect(amount, source = "") {
+    function _applyPressureToAspect(amount, source = "a Concept") {
         if (!currentAspect) return;
         let pressureApplied = amount;
-        // Consider Aspect states that modify pressure (e.g. Vulnerable)
-        // ...
+        if (currentAspect.states.some(s => s.name === "Vulnerable")) pressureApplied *= 1.5; // Example state
 
         if (currentAspect.composure > 0) {
             const absorbed = Math.min(pressureApplied, currentAspect.composure);
             currentAspect.composure -= absorbed;
             pressureApplied -= absorbed;
-            UIManager.addLogEntry(`${currentAspect.name}'s Composure absorbs ${absorbed} Pressure from ${source}.`, "combat");
+            UIManager.addLogEntry(`${currentAspect.name}'s Composure absorbs ${absorbed} Pressure.`, "combat");
         }
         if (pressureApplied > 0) {
-            currentAspect.resolve -= pressureApplied;
+            currentAspect.resolve -= Math.floor(pressureApplied); // Use floor for clean numbers
             currentAspect.tookPressureThisTurn = true;
-            UIManager.addLogEntry(`${currentAspect.name} takes ${pressureApplied} Pressure from ${source}. Resolve: ${currentAspect.resolve}/${currentAspect.maxResolve}`, "combat_crit"); // Use crit for emphasis
+            UIManager.addLogEntry(`${currentAspect.name} takes ${Math.floor(pressureApplied)} Pressure from ${source}. Resolve: ${currentAspect.resolve}/${currentAspect.maxResolve}`, "combat_crit");
         }
-        if (currentAspect.resolve < 0) currentAspect.resolve = 0;
+        if (currentAspect.resolve <= 0) currentAspect.resolve = 0;
     }
 
     function _gainAspectComposure(amount, source = "") {
         if (!currentAspect) return;
         currentAspect.composure += amount;
-        if (currentAspect.composure > currentAspect.maxComposureCap) { // Optional cap
+        if (currentAspect.composure > currentAspect.maxComposureCap) {
             currentAspect.composure = currentAspect.maxComposureCap;
         }
-        UIManager.addLogEntry(`${currentAspect.name} gains ${amount} Composure from ${source}. Composure: ${currentAspect.composure}`, "combat");
+        UIManager.addLogEntry(`${currentAspect.name} gains ${amount} Composure (${source}). Composure: ${currentAspect.composure}`, "combat");
     }
 
     function _buildResonance(amount, source = "") {
         if (!currentAspect) return;
-        // Consider traits/states that modify resonance gain
-        if (currentAspect.visibleTraits.some(t => t.name.includes("Wounded")) && source.includes("#Understanding")) {
-            amount +=1; // Example Wounded trait bonus
-            UIManager.addLogEntry("Wounded Trait: +1 bonus Resonance.", "system_positive");
-        }
-
         currentAspect.resonance += amount;
         if (currentAspect.resonance > currentAspect.resonanceGoal) currentAspect.resonance = currentAspect.resonanceGoal;
-        UIManager.addLogEntry(`Resonance with ${currentAspect.name} builds by ${amount} from ${source}. Resonance: ${currentAspect.resonance}/${currentAspect.resonanceGoal}`, "system_positive");
+        UIManager.addLogEntry(`Resonance with ${currentAspect.name} grows by ${amount} (${source}). (${currentAspect.resonance}/${currentAspect.resonanceGoal})`, "system_positive");
     }
 
     function _buildDissonance(amount, source = "") {
         if (!currentAspect) return;
         currentAspect.dissonance += amount;
-        if (currentAspect.dissonance > currentAspect.dissonanceThreshold) currentAspect.dissonance = currentAspect.dissonanceThreshold;
-        UIManager.addLogEntry(`Dissonance with ${currentAspect.name} builds by ${amount} from ${source}. Dissonance: ${currentAspect.dissonance}/${currentAspect.dissonanceThreshold}`, "system_negative");
+        // No cap on accumulation, but threshold triggers effect
+        UIManager.addLogEntry(`Dissonance with ${currentAspect.name} deepens by ${amount} (${source}). (${currentAspect.dissonance}/${currentAspect.dissonanceThreshold})`, "system_negative");
 
-        if (currentAspect.dissonance >= currentAspect.dissonanceThreshold) {
-            UIManager.addLogEntry(`${currentAspect.name} reaches Dissonance threshold! (Effect TBD)`, "critical");
-            // Trigger Dissonance threshold effect (e.g., Aspect gains a buff, player gets a Trauma)
-            currentPlayerRef.addTrauma("T001"); // Example: add Whispers of Doubt
+        if (currentAspect.dissonance >= currentAspect.dissonanceThreshold && !currentAspect.dissonanceTriggered) {
+            currentAspect.dissonanceTriggered = true; // Prevent multiple triggers per threshold pass
+            UIManager.addLogEntry(`${currentAspect.name} crosses its Dissonance threshold! It becomes more agitated!`, "critical");
+            // Example: Aspect gains a temporary buff or player gets a Trauma
+            _applyAspectState({ name: "Agitated", duration: 2, pressureBoost: 1 }); // Custom state logic needed
+            currentPlayerRef.addTraumaToDiscard("TRM001"); // Add Disorientation
         }
+    }
+
+    function _applyAspectState(stateObject) { // { name, duration, data... }
+        if (!currentAspect) return;
+        let existingState = currentAspect.states.find(s => s.name === stateObject.name);
+        if (existingState) {
+            existingState.duration = Math.max(existingState.duration || 0, stateObject.duration || 0);
+            // Merge other data if needed
+        } else {
+            currentAspect.states.push(stateObject);
+        }
+        UIManager.addLogEntry(`${currentAspect.name} becomes ${stateObject.name}.`, "aspect_action_subtle");
     }
 
     function _updateAspectStates() {
@@ -296,144 +274,167 @@ const EncounterManager = (() => { // IIFE for a module-like structure
                 state.duration--;
                 if (state.duration <= 0) {
                     UIManager.addLogEntry(`${currentAspect.name} is no longer ${state.name}.`, "system");
-                    return false; // Remove expired state
+                    return false;
                 }
             }
-            return true; // Keep state
+            return true;
         });
     }
-
 
     function _chooseAspectIntent() {
         if (!currentAspect || !currentAspect.intents || currentAspect.intents.length === 0) {
             currentAspect.currentIntent = { description: "No actions available.", functionName: null };
             return;
         }
-        // Simple random choice for now
-        const randomIndex = Math.floor(Math.random() * currentAspect.intents.length);
-        currentAspect.currentIntent = currentAspect.intents[randomIndex];
+        const availableIntents = currentAspect.intents.filter(intent => {
+            // Add conditions for intents if any (e.g. only use 'Fade Away' if turnCount >= 3)
+            if (intent.id === "INT_DOUBT_03" && currentAspect.turnCount < 3) return false;
+            return true;
+        });
+        if (availableIntents.length === 0) { // Fallback if conditions make all intents unavailable
+             currentAspect.currentIntent = currentAspect.intents[Math.floor(Math.random() * currentAspect.intents.length)];
+        } else {
+            currentAspect.currentIntent = availableIntents[Math.floor(Math.random() * availableIntents.length)];
+        }
     }
 
     function revealHiddenAspectTrait() {
-        if (!isActive || !currentAspect || currentPlayerRef.insight < 1) { // Assuming 1 Insight cost
-            if(currentPlayerRef.insight < 1) UIManager.addLogEntry("Not enough Insight to reveal a Trait.", "warning");
+        if (!isActive || !currentAspect || currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0) {
+            if (currentPlayerRef.insight < 1) UIManager.addLogEntry("Not enough Insight.", "warning");
+            else if (_getUnrevealedTraitCount() === 0) UIManager.addLogEntry("No more hidden traits to reveal.", "system");
             return;
         }
-        currentPlayerRef.modifyInsight(-1);
-        // UIManager.updatePlayerStats(currentPlayerRef.getUIData()); // Main.js handles this
+        currentPlayerRef.modifyInsight(-1, "revealing a Trait");
 
         const unrevealed = currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name));
-        if (unrevealed.length > 0) {
-            const traitToReveal = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+        if (unrevealed.length > 0) { // Should always be true due to earlier check
+            const traitToReveal = unrevealed[0]; // Reveal in order or random
             currentAspect.revealedTraits.push(traitToReveal.name);
-            UIManager.addLogEntry(`Revealed Hidden Trait for ${currentAspect.name}: ${traitToReveal.name} - ${traitToReveal.description}`, "discovery");
-            UIManager.displayEncounterView(currentAspect, currentPlayerRef); // Update UI to show revealed trait
-        } else {
-            UIManager.addLogEntry(`No more hidden traits on ${currentAspect.name} to reveal.`, "system");
+            UIManager.addLogEntry(`Revealed: ${traitToReveal.name} - ${traitToReveal.description}`, "discovery");
         }
-        UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || unrevealed.length <=1 );
+        _updateEncounterUIDisplay(); // Update UI
+        UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0);
     }
-
 
     function _checkEncounterWinLoss() {
-        if (!isActive || !currentAspect) return;
-
-        if (currentPlayerRef.integrity <= 0) {
-            endEncounter("aspect_win"); // Player lost
-            return true;
-        }
-        if (currentAspect.resolve <= 0) {
-            endEncounter("player_win_resolve"); // Player won by reducing resolve
-            return true;
-        }
-        if (currentAspect.resonance >= currentAspect.resonanceGoal) {
-            endEncounter("player_win_resonance"); // Player won by filling resonance
-            return true;
-        }
-        return false; // Encounter continues
+        if (!isActive || !currentAspect) return false;
+        if (currentPlayerRef.integrity <= 0) { endEncounter("aspect_win"); return true; }
+        if (currentAspect.resolve <= 0) { endEncounter("player_win_resolve"); return true; }
+        if (currentAspect.resonance >= currentAspect.resonanceGoal) { endEncounter("player_win_resonance"); return true; }
+        return false;
     }
 
-    // --- Placeholder for Card Effect Implementations ---
-    // These would call the helpers like _applyPressureToAspect, _buildResonance etc.
+    // --- Card & Intent Effect Implementations ---
     const conceptCardEffects = {
-        playTentativeInquiry: (cardDef) => {
-            revealHiddenAspectTrait(); // Or a portion of it for this card specifically
+        playGraspForAwareness: (cardDef) => {
+            currentPlayerRef.modifyFocus(1, cardDef.name);
+            const drawnCardId = currentPlayerRef.drawFromAwakeningDeck(); // Special draw
+            // UI for hand already updated by drawFromAwakeningDeck if it calls UIManager
+        },
+        playFragmentedMemoryTheFall: (cardDef) => {
+            currentPlayerRef.modifyClarity(2, cardDef.name);
+            currentPlayerRef.addTraumaToDiscard("TRM001"); // Add Disorientation
+            UIManager.addJournalEntry("A Glimpse of the Fall", "A painful, fractured vision... how I arrived here. It brought some Clarity, but also a deep Disorientation.");
+            // This card also reveals connections on the map, handled by main.js/storylet outcome
+            Game.revealAwakeningMapConnections(); // Notify main game
+        },
+        playEchoOfAName: (cardDef) => {
+            const name = CONFIG.INITIAL_PSYCHONAUT_NAME;
+            currentPlayerRef.name = name; // Set player name
+            UIManager.getDOMElement('psychonautNameDisplay').textContent = name; // Update header
+            currentPlayerRef.modifyMaxIntegrity(40 + PLAYER_INITIAL_STATS.maxIntegrity); // Increase max
+            currentPlayerRef.modifyIntegrity(20, cardDef.name); // Heal
+            currentPlayerRef.modifyMaxFocus(3 + PLAYER_INITIAL_STATS.maxFocus); // Increase max focus too
+            currentPlayerRef.modifyFocus(3, cardDef.name); // Restore some focus
+            UIManager.addJournalEntry("An Echo, A Name", `I remember... my name is ${name}. With it, a measure of strength returns.`);
+        },
+        playPrimalFear: (cardDef) => {
+            _applyPressureToAspect(3, cardDef.name); // Target current aspect
+            _buildDissonance(1, cardDef.name); // Dissonance with self
+        },
+        playSharedSorrow: (cardDef) => {
+            let resonanceAmount = 2;
+            // Check current aspect for traits (more complex logic needed to check specific traits like 'Sadness' or 'Wounded')
+            if (currentAspect && (currentAspect.visibleTraits.some(t => t.name.toLowerCase().includes("sad") || t.name.toLowerCase().includes("wound")) ||
+                                 currentAspect.hiddenTraits.some(t => (currentAspect.revealedTraits.includes(t.name)) && (t.name.toLowerCase().includes("sad") || t.name.toLowerCase().includes("wound"))))) {
+                UIManager.addLogEntry(`"${cardDef.name}" resonates deeply with ${currentAspect.name}'s sorrow.`, "system_positive_strong");
+                resonanceAmount +=1; // Bonus for matching trait
+            }
+            _buildResonance(resonanceAmount, cardDef.name);
+            currentPlayerRef.modifyIntegrity(1, cardDef.name);
+        },
+        playDetachedObservation: (cardDef) => {
+            // This card's effect ("next reveal card costs less") needs a temporary player state or flag
+            // Game.setPlayerTempFlag("detachedObservationActive", true);
+            UIManager.addLogEntry("You adopt a detached perspective for your next query.", "system_positive");
+            currentPlayerRef.drawCards(1);
+        },
+        playStandardInquiry: (cardDef) => { // From old config, ensure it works
+            revealHiddenAspectTrait();
             _buildResonance(1, cardDef.name);
         },
-        playAssertiveStance: (cardDef) => {
+        playStandardChallenge: (cardDef) => { // From old config
             _applyPressureToAspect(4, cardDef.name);
             _buildDissonance(1, cardDef.name);
         },
-        playMomentOfComposure: (cardDef) => {
-            playerEncounterState.composure += 5; // Conceptual player composure
-            UIManager.addLogEntry(`Player gains 5 conceptual Composure.`, "player_action");
-            // In a more complex system, this would apply a state that reduces next incoming damage
+        onDrawDisorientation: (cardDef) => { // Called from Player.drawCards() via main Game loop
+            UIManager.addLogEntry(`TRAUMA EFFECT: ${cardDef.name} clouds your thoughts! (All Concepts +1 Focus cost this turn unless 1 Clarity spent).`, "trauma_major");
+            // The choice to spend Clarity would be a UI prompt in a full game.
+            // For now, let's assume if Clarity > 0, player *can* choose.
+            // The actual cost modification happens when playing a card.
+            // We can set a flag on playerEncounterState.
+            // Main game loop needs to show a prompt or auto-resolve if AI.
+            // For now, let's just log. Actual effect is checked in playConceptCard.
+            if (currentPlayerRef.clarity > 0) {
+                 // Game.promptPlayerForClaritySpendOnDisorientation(); // Hypothetical
+            }
         },
-        playWhispersOfDoubt: (cardDef) => { // Effect if explicitly played
-            _buildDissonance(1, cardDef.name);
-        }
-        // onDrawWhispersOfDoubt would be handled by Player.drawCards()
+        playDisorientation: (cardDef) => { /* No effect if explicitly played, effect is onDraw */ }
     };
 
-    // --- Placeholder for Aspect Intent Effect Implementations ---
     const aspectIntentEffects = {
-        intentMinorWorrySpike: (params) => {
-            const damage = params?.damage || 2;
-            UIManager.addLogEntry(`${currentAspect.name} lashes out with a spike of worry!`, "aspect_action");
-            // Apply damage to player, considering player's encounter composure
-            let actualDamage = damage;
-            if (playerEncounterState.composure > 0) {
-                const absorbed = Math.min(actualDamage, playerEncounterState.composure);
-                playerEncounterState.composure -= absorbed;
-                actualDamage -= absorbed;
-                UIManager.addLogEntry(`Your composure absorbed ${absorbed} damage.`, "player_action_good");
-            }
-            if (actualDamage > 0) {
-                currentPlayerRef.modifyIntegrity(-actualDamage);
-            }
-            _updateEncounterPlayerStatus(); // Update UI for player integrity/composure
+        intentSowConfusion: (params) => {
+            const traumaId = params.traumaId || "TRM001"; // Default to Disorientation if not specified
+            UIManager.addLogEntry(`${currentAspect.name} whispers disorienting notions.`, "aspect_action");
+            currentPlayerRef.addTraumaToDiscard(traumaId);
         },
-        intentSuddenRetreat: (params) => {
-            const composureGain = params?.composure || 5;
-            UIManager.addLogEntry(`${currentAspect.name} recoils, building its defenses.`, "aspect_action");
-            _gainAspectComposure(composureGain, "Sudden Retreat");
+        intentWhisperDiscouragement: (params) => {
+            UIManager.addLogEntry(`${currentAspect.name} murmurs words of despair.`, "aspect_action");
+            currentPlayerRef.modifyHope(-1, `${currentAspect.name}'s discouragement`);
         },
-        intentDismissiveGlare: (params) => {
-            const damage = params?.damage || 3;
-            UIManager.addLogEntry(`${currentAspect.name} glares dismissively!`, "aspect_action");
-            currentPlayerRef.modifyIntegrity(-damage);
-            // Player discards 1 random card
-            if (currentPlayerRef.hand.length > 0) {
-                const randomIndex = Math.floor(Math.random() * currentPlayerRef.hand.length);
-                const cardIdToDiscard = currentPlayerRef.hand[randomIndex];
-                currentPlayerRef.discardCard(cardIdToDiscard); // discardCard logs its own message
-                UIManager.updatePlayerHand(currentPlayerRef.getHandCardData());
+        intentFadeAway: (params) => {
+            if (currentAspect.turnCount >= 3) {
+                 UIManager.addLogEntry(`${currentAspect.name} begins to dissipate!`, "aspect_action_special");
+                 endEncounter("aspect_fled");
+            } else {
+                UIManager.addLogEntry(`${currentAspect.name} attempts to fade, but holds its form.`, "aspect_action_subtle");
+                // Does nothing else this turn if it fails to fade
             }
-            _updateEncounterPlayerStatus();
-        },
-        intentReinforceBeliefs: (params) => {
-            const composureGain = params?.composure || 3;
-            UIManager.addLogEntry(`${currentAspect.name} reinforces its beliefs.`, "aspect_action");
-            _gainAspectComposure(composureGain, "Reinforce Beliefs");
-            _buildDissonance(1, "Reinforce Beliefs");
         }
+        // Add more intent effects from config here
     };
 
-
-    // --- Public API ---
     return {
         init,
         startEncounter,
-        endEncounter, // Could be called by main loop if player flees or other conditions
+        endEncounter,
         isActive: () => isActive,
-        getCurrentAspect: () => currentAspect, // For UI or other systems to query
+        getCurrentAspectData: () => currentAspect, // Read-only access to current aspect state
         playConceptCard,
-        playerEndTurn: _endPlayerTurn, // Expose for UI button
+        playerEndTurn: _endPlayerTurn,
         revealHiddenAspectTrait,
-        // Potentially more functions to handle specific player actions in encounter
+        // For "Disorientation" Trauma, allowing main loop to trigger clarity spend choice
+        canSpendClarityForDisorientation: () => currentPlayerRef && currentPlayerRef.clarity > 0 && currentPlayerRef.hand.some(id => id === "TRM001") && !playerEncounterState.disorientationClaritySpentThisTurn,
+        spendClarityForDisorientation: () => {
+            if (currentPlayerRef && currentPlayerRef.clarity > 0) {
+                currentPlayerRef.modifyClarity(-1, "negating Disorientation");
+                playerEncounterState.disorientationClaritySpentThisTurn = true;
+                UIManager.addLogEntry("You spend 1 Clarity to clear the Disorientation's immediate effect.", "player_action_good");
+                _updateEncounterUIDisplay(); // Refresh UI in case clarity change affects anything
+                return true;
+            }
+            return false;
+        },
+        getConceptCardEffectFunction: (functionName) => conceptCardEffects[functionName], // For Game loop to call onDraw effects
     };
-
 })();
-
-// Initialization would be called by main.js
-// EncounterManager.init(GamePlayer);

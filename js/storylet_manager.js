@@ -2,35 +2,32 @@
 
 const StoryletManager = (() => {
 
-    let activeStoryletData = null; // Stores the original definition from config
-    let activeStoryletInstance = null; // Working copy with evaluated choice conditions
+    let activeStoryletData = null;
+    let activeStoryletInstance = null; 
     let currentPlayerRef = null;
     let currentWorldRef = null;
 
     function init(player, world) {
         currentPlayerRef = player;
         currentWorldRef = world;
-        console.log("StoryletManager (v2 Awakening - Full) initialized.");
+        console.log("StoryletManager (v2 Awakening - Full Corrected) initialized.");
     }
 
     function startStorylet(storyletId) {
-        // Assumes STORYLET_DATA_MINIMAL is globally available from config.js
         const storyletDef = STORYLET_DATA_MINIMAL[storyletId]; 
         if (storyletDef) {
-            activeStoryletData = { ...storyletDef }; // Store original definition
-            // Create a new instance for this display, especially for choices
+            activeStoryletData = { ...storyletDef };
             activeStoryletInstance = { 
                 id: storyletDef.id,
                 title: storyletDef.title,
                 text: storyletDef.text,
-                choices: [] // Initialize as empty, then populate
+                choices: [] 
             };
 
-            // Deep copy choices and evaluate conditions for the instance
             if (storyletDef.choices && Array.isArray(storyletDef.choices)) {
                 activeStoryletInstance.choices = storyletDef.choices.map(choiceDef => {
-                    const choiceInstance = { ...choiceDef }; // Copy choice
-                    choiceInstance.disabled = false; // Default to enabled
+                    const choiceInstance = { ...choiceDef };
+                    choiceInstance.disabled = false;
                     choiceInstance.disabledReason = "";
                     if (choiceDef.conditionFunctionName && typeof storyletConditions[choiceDef.conditionFunctionName] === 'function') {
                         if (!storyletConditions[choiceDef.conditionFunctionName](choiceDef.conditionParams || {})) {
@@ -38,41 +35,35 @@ const StoryletManager = (() => {
                             choiceInstance.disabledReason = choiceDef.conditionDisabledReason || "You cannot choose this option presently.";
                         }
                     } else if (choiceDef.conditionFunctionName) {
-                        // This means the function name was specified in config but not found in storyletConditions
-                        console.warn(`Condition function "${choiceDef.conditionFunctionName}" not found for storylet "${storyletId}", choice "${choiceDef.text}". Choice will be enabled by default.`);
+                        console.warn(`Condition function "${choiceDef.conditionFunctionName}" not found for storylet "${storyletId}", choice "${choiceDef.text}". Choice enabled by default.`);
                     }
                     return choiceInstance;
                 });
             }
 
-            // UIManager.displayStorylet is called by Game (main.js) after Game._switchToView('storylet-view')
-            // This module now just prepares the data.
-            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
-                 UIManager.addLogEntry(`Storylet Engaged: ${activeStoryletInstance.title}`, "story");
+            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) { 
+                UIManager.addLogEntry(`Storylet Engaged: ${activeStoryletInstance.title}`, "story");
             }
-            // UIManager.displayStorylet(activeStoryletInstance); // Game module will call this
-            return activeStoryletInstance; // Return the prepared instance for UIManager to display
+            // Game module will call UIManager.displayStorylet AFTER switching view
+            return activeStoryletInstance; 
         } else {
             if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
                 UIManager.addLogEntry(`Error: Storylet ID "${storyletId}" not found.`, "error");
             }
             console.error(`Storylet ID "${storyletId}" not found.`);
-            activeStoryletData = null; 
-            activeStoryletInstance = null;
-            if (typeof Game !== 'undefined' && Game.storyletEnded) Game.storyletEnded(); // Notify main to handle fallback
-            return null; // Indicate failure to start
+            activeStoryletData = null; activeStoryletInstance = null;
+            if (typeof Game !== 'undefined' && Game.storyletEnded) Game.storyletEnded(); 
+            return null; 
         }
     }
 
     function makeChoice(choiceIndex) {
         if (!activeStoryletInstance || !activeStoryletInstance.choices || choiceIndex < 0 || choiceIndex >= activeStoryletInstance.choices.length) {
-            if(UIManager) UIManager.addLogEntry("Invalid storylet choice made.", "error"); 
-            return;
+            if(UIManager) UIManager.addLogEntry("Invalid storylet choice made.", "error"); return;
         }
         const chosenOption = activeStoryletInstance.choices[choiceIndex];
         if (chosenOption.disabled) {
-            if(UIManager) UIManager.addLogEntry(`Cannot select disabled choice: "${chosenOption.text}" (Reason: ${chosenOption.disabledReason})`, "warning"); 
-            return;
+            if(UIManager) UIManager.addLogEntry(`Cannot select disabled choice: "${chosenOption.text}" (Reason: ${chosenOption.disabledReason})`, "warning"); return;
         }
         if(UIManager) UIManager.addLogEntry(`Chose: "${chosenOption.text}"`, "choice");
         
@@ -83,40 +74,30 @@ const StoryletManager = (() => {
         } else {
             if(UIManager) UIManager.addLogEntry(`Outcome function "${chosenOption.outcomeFunctionName}" not implemented for "${chosenOption.text}". Storylet ends.`, "error");
             console.warn(`Outcome function "${chosenOption.outcomeFunctionName}" not implemented.`);
-            endStorylet(); // Default to ending if no valid outcome
+            endStorylet();
         }
     }
 
     function endStorylet(logMessage = "The moment passes into memory.") {
-        if (activeStoryletData && UIManager && UIManager.addLogEntry) { 
-            UIManager.addLogEntry(logMessage, "system"); 
-        }
-        activeStoryletData = null; 
-        activeStoryletInstance = null;
-        if (Game && Game.storyletEnded) Game.storyletEnded(); // Notify main controller
+        if (activeStoryletData && UIManager && UIManager.addLogEntry) { UIManager.addLogEntry(logMessage, "system"); }
+        activeStoryletData = null; activeStoryletInstance = null;
+        if (Game && Game.storyletEnded) Game.storyletEnded();
     }
 
-    // --- Storylet Choice Conditions ---
     const storyletConditions = {
         conditionHasFocus1: (params) => currentPlayerRef && currentPlayerRef.focus >= 1,
         conditionPlayerWounded: (params) => currentPlayerRef && (currentPlayerRef.integrity < (currentPlayerRef.maxIntegrity * 0.5)),
         conditionHasMemory: (params) => currentPlayerRef && params.memoryId && currentPlayerRef.hasMemory(params.memoryId),
-        conditionHasCardInHand: (params) => { // params = { cardId: "CARD_ID" }
-            return currentPlayerRef && params.cardId && currentPlayerRef.hand.includes(params.cardId);
-        },
-        conditionPlayerNotAtMaxIntegrity: (params) => {
-            return currentPlayerRef && currentPlayerRef.integrity < currentPlayerRef.maxIntegrity;
-        },
+        conditionHasCardInHand: (params) => currentPlayerRef && params.cardId && currentPlayerRef.hand.includes(params.cardId),
+        conditionPlayerNotAtMaxIntegrity: (params) => currentPlayerRef && currentPlayerRef.integrity < currentPlayerRef.maxIntegrity,
     };
 
-    // --- Storylet Outcome Functions (Expanded for Intro) ---
     const storyletOutcomes = {
         outcomePlayGraspForAwarenessShore: (params) => {
             const graspCardId = "AWK001";
             console.log("Player hand at VERY START of outcomePlayGraspForAwarenessShore:", JSON.stringify(currentPlayerRef.hand));
             if (currentPlayerRef.hand.includes(graspCardId)) {
                 const cardDef = CONCEPT_CARD_DEFINITIONS[graspCardId]; 
-                // Focus for cost 0 card is implicitly available if player has >=0 focus
                 const playedCardDef = currentPlayerRef.playCardFromHand(graspCardId); 
                 if (playedCardDef) { 
                     if(UIManager) UIManager.addLogEntry(`You instinctively ${playedCardDef.name.toLowerCase()}.`, "player_action_major");

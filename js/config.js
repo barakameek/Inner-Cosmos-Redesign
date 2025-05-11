@@ -2,30 +2,35 @@
 
 // --- Initial Game Configurations & Constants ---
 const CONFIG = {
-    INITIAL_PSYCHONAUT_NAME: "The Wanderer",
-    INITIAL_AMBITION_TEXT: "To Understand the Whispers",
+    INITIAL_PSYCHONAUT_NAME: "The Awakened", // Updated for intro
+    INITIAL_AMBITION_TEXT: "To Grasp What Was Lost", // Updated for intro
 
-    MAX_HAND_SIZE: 7, // Max concepts in hand during encounter
-    INITIAL_CARD_DRAW_ENCOUNTER: 3, // How many cards drawn at start of an encounter
-    TURN_START_CARD_DRAW: 1, // Cards drawn at start of player's turn in encounter
+    MAX_HAND_SIZE: 5, // Slightly smaller hand for more focused intro
+    INITIAL_CARD_DRAW_ENCOUNTER: 3,
+    AWAKENING_DECK_INITIAL_DRAW: 1, // Special for "Grasp for Awareness"
+    TURN_START_CARD_DRAW: 1,
 
-    LOG_MAX_ENTRIES: 50, // Max entries in the event log before older ones are trimmed
+    LOG_MAX_ENTRIES: 50,
     JOURNAL_MAX_ENTRIES: 20,
+
+    // For the pre-game intro text display
+    PRE_GAME_INTRO_LINE_DELAY: 2000, // ms between lines
+    PRE_GAME_INTRO_FADE_DURATION: 1500, // ms for fade-in (should match CSS animation)
 };
 
-// --- Player Initial Stats & Resources ---
+// --- Player Initial Stats & Resources (For "The Precipice" Start) ---
 const PLAYER_INITIAL_STATS = {
-    integrity: 100,
-    maxIntegrity: 100,
-    focus: 5,
-    maxFocus: 5,
-    clarity: 20, // Represents "mental supplies" for travel
-    maxClarity: 20,
-    hope: 5,
+    integrity: 10,
+    maxIntegrity: 10, // Starts low, "Echo of a Name" will increase it
+    focus: 1,
+    maxFocus: 1, // Starts low
+    clarity: 1,
+    maxClarity: 20, // Max clarity is still decent
+    hope: 0,
     maxHope: 10,
-    despair: 0,
+    despair: 7, // Starts high
     maxDespair: 10,
-    insight: 0, // Meta-currency / in-run special action currency
+    insight: 0,
 
     attunements: {
         attraction: 0,
@@ -37,12 +42,11 @@ const PLAYER_INITIAL_STATS = {
         rolefocus: 0,
     },
 
-    memories: [], // Array for active artifact names/objects
-    personaStance: null, // Current active stance
+    memories: [],
+    personaStance: null,
 };
 
 // --- Attunement Definitions (Names & Descriptions) ---
-// Actual mechanics linked to these would be in player.js or encounter_manager.js
 const ATTUNEMENT_DEFINITIONS = {
     attraction: { name: "Attraction (A)", description: "Influence through allure, magnetism, and understanding of desire." },
     interaction: { name: "Interaction (I)", description: "Direct engagement, confrontation, setting boundaries, and debate." },
@@ -53,175 +57,284 @@ const ATTUNEMENT_DEFINITIONS = {
     rolefocus: { name: "RoleFocus (RF)", description: "Adopting personas, performance, and control through defined roles." }
 };
 
-// --- Concept Card Definitions ---
-// This will be a large object/dictionary. Card effects will be functions.
-// For simplicity here, effects are strings, but they'd be complex functions in reality.
+// --- Concept Card Definitions (Expanded for Intro) ---
 const CONCEPT_CARD_DEFINITIONS = {
-    "C001": {
-        id: "C001",
-        name: "Tentative Inquiry",
-        type: "Technique", // Expression, Technique, Insight, Trauma
-        attunement: "Psychological", // Primary attunement for scaling/synergy
-        cost: 1, // Focus cost
-        keywords: ["#Gentle", "#Reveal"],
-        description: "Gently probe the Aspect. Reveal one of its Hidden Traits. Builds 1 Resonance.",
-        effectFunctionName: "playTentativeInquiry" // Name of function in encounter_manager.js or concept_cards.js
-        // In a more complex system, the effect function itself might be defined here or imported
+    // Awakening Deck Cards
+    "AWK001": {
+        id: "AWK001",
+        name: "Grasp for Awareness",
+        type: "Technique",
+        attunement: "Cognitive",
+        cost: 0,
+        keywords: ["#Focus", "#Draw"],
+        description: "A primal urge to understand. Gain 1 Focus. Draw 1 card from your Awakening insights.",
+        effectFunctionName: "playGraspForAwareness"
     },
-    "C002": {
-        id: "C002",
-        name: "Assertive Stance",
+    "AWK002": {
+        id: "AWK002",
+        name: "Fragmented Memory: The Fall",
+        type: "Insight",
+        attunement: "Cognitive",
+        cost: 1,
+        keywords: ["#Reveal", "#Clarity", "#TraumaSource"],
+        description: "Witness a sliver of how you arrived. Gain 2 Clarity. Add 'Disorientation' (Trauma) to your discard pile.",
+        effectFunctionName: "playFragmentedMemoryTheFall"
+    },
+    "AWK003": {
+        id: "AWK003",
+        name: "Echo of a Name",
+        type: "Technique",
+        attunement: "Psychological",
+        cost: 1,
+        keywords: ["#Self", "#Heal", "#IntegrityBoost"],
+        description: `Recall a faint echo. Your name is ${CONFIG.INITIAL_PSYCHONAUT_NAME}. Gain +40 Max Integrity. Heal 20 Integrity.`,
+        effectFunctionName: "playEchoOfAName"
+    },
+    "AWK004": {
+        id: "AWK004",
+        name: "Primal Fear",
+        type: "Expression",
+        attunement: "Interaction", // Or Sensory
+        cost: 1,
+        keywords: ["#Pressure", "#Fear", "#DissonanceSource"],
+        description: "A raw, instinctual reaction. Apply 3 'Fear' (Pressure) to an unformed threat. Builds 1 Dissonance with self.",
+        effectFunctionName: "playPrimalFear"
+    },
+
+    // Trauma Card
+    "TRM001": {
+        id: "TRM001",
+        name: "Disorientation",
+        type: "Trauma",
+        attunement: "None",
+        cost: 0, // Effect is on draw or passive
+        keywords: ["#Clutter", "#Debuff"],
+        description: "When drawn: All Concepts cost +1 Focus this turn unless you spend 1 Clarity to negate this effect.",
+        onDrawFunctionName: "onDrawDisorientation", // Special function for on-draw effects
+        effectFunctionName: "playDisorientation" // Effect if explicitly played (maybe none)
+    },
+
+    // Cards gained from Intro Locations
+    "CON001": {
+        id: "CON001",
+        name: "Shared Sorrow",
+        type: "Expression",
+        attunement: "Psychological",
+        cost: 1,
+        keywords: ["#Gentle", "#Resonate", "#Heal"],
+        description: "Connect with sadness. Build 2 Resonance with Aspects having 'Sadness' or 'Wounded' traits. Heal 1 Player Integrity.",
+        effectFunctionName: "playSharedSorrow"
+    },
+    "CON002": {
+        id: "CON002",
+        name: "Detached Observation",
+        type: "Technique",
+        attunement: "Cognitive",
+        cost: 0,
+        keywords: ["#Reveal", "#Draw", "#Focus"],
+        description: "Objectively assess. The next card played that reveals an Aspect Trait costs 1 less Focus. Draw 1 card.",
+        effectFunctionName: "playDetachedObservation"
+    },
+    // Basic cards for later if needed (from original config)
+     "C001_STD": { // Renamed to avoid clash if AWK used similar numbers
+        id: "C001_STD",
+        name: "Standard Inquiry",
+        type: "Technique",
+        attunement: "Psychological",
+        cost: 1,
+        keywords: ["#Gentle", "#Reveal"],
+        description: "Probe the Aspect. Reveal one of its Hidden Traits. Builds 1 Resonance.",
+        effectFunctionName: "playStandardInquiry"
+    },
+    "C002_STD": {
+        id: "C002_STD",
+        name: "Standard Challenge",
         type: "Expression",
         attunement: "Interaction",
         cost: 2,
         keywords: ["#Challenge", "#Pressure"],
         description: "Directly challenge the Aspect. Apply 4 Pressure. Builds 1 Dissonance.",
-        effectFunctionName: "playAssertiveStance"
-    },
-    "C003": {
-        id: "C003",
-        name: "Moment of Composure",
-        type: "Technique",
-        attunement: "Cognitive",
-        cost: 1,
-        keywords: ["#Shield", "#Focus"], // Hypothetical #Focus keyword if it interacts with Focus regen
-        description: "Center yourself. Gain 5 Player Composure (absorbs next incoming Pressure).",
-        effectFunctionName: "playMomentOfComposure"
-    },
-    "T001": { // Example Trauma card
-        id: "T001",
-        name: "Whispers of Doubt",
-        type: "Trauma",
-        attunement: "None",
-        cost: 0, // Traumas often have 0 cost but negative on-draw or on-play effects
-        keywords: ["#DissonanceSource"],
-        description: "When drawn: Lose 1 Focus this turn. If played: Builds 1 Dissonance.",
-        onDrawFunctionName: "onDrawWhispersOfDoubt", // Special function for on-draw effects
-        effectFunctionName: "playWhispersOfDoubt"
+        effectFunctionName: "playStandardChallenge"
     }
-    // ... more cards
 };
 
-// --- Starting Deck ---
-const PLAYER_INITIAL_DECK = [
-    "C001", "C001", // 2x Tentative Inquiry
-    "C002",         // 1x Assertive Stance
-    "C003", "C003", "C003" // 3x Moment of Composure
-];
+// --- Initial Decks for the "Awakening" Intro ---
+const PLAYER_INITIAL_AWAKENING_HAND = ["AWK001"]; // Starts with only "Grasp for Awareness"
+const PLAYER_AWAKENING_DECK_CONTENTS = ["AWK002", "AWK003", "AWK004"]; // Cards to be drawn by AWK001
+
+// Player's actual deck will be empty initially, populated by AWK001's draws.
+// Then, new cards are added via storylets.
+const PLAYER_INITIAL_DECK = []; // Starts empty, "Grasp for Awareness" builds it.
 
 
-// --- Aspect Templates ---
-// Similar to cards, effects/intents would be functions or point to function names
+// --- Aspect Templates (Intro Aspect) ---
 const ASPECT_TEMPLATES = {
-    "ASP001": {
-        id: "ASP001",
-        name: "Fleeting Anxiety",
-        baseResolve: 15,
+    "ASP_LINGERING_DOUBT": {
+        id: "ASP_LINGERING_DOUBT",
+        name: "Lingering Doubt",
+        baseResolve: 5,
         baseComposure: 0,
-        resonanceGoal: 3,
+        resonanceGoal: 2, // Low goal for a quick encounter
         dissonanceThreshold: 3,
         visibleTraits: [
-            { name: "Jittery", description: "Has a 25% chance to change its Intent randomly each turn." }
+            { name: "Ephemeral", description: "Fades if not addressed quickly." },
+            { name: "Feeds on Negativity", description: "Gains 1 Composure if player plays a card that builds Dissonance with self."}
         ],
         hiddenTraits: [
-            { name: "Seeks Reassurance", description: "#Gentle Concepts build +1 bonus Resonance." }
-        ],
-        intents: [ // Array of intent objects or function names that define intent logic
-            { id: "INT001A", name: "Minor Worry Spike", description: "Deals 2 Psychological Damage.", functionName: "intentMinorWorrySpike" },
-            { id: "INT001B", name: "Sudden Retreat", description: "Gains 5 Composure.", functionName: "intentSuddenRetreat" }
-        ],
-        rewards: { // Potential rewards upon resolution
-            insight: 5,
-            conceptPool: ["C001_UPG", "C004"] // IDs of potential card rewards
-        }
-    },
-    "ASP002": {
-        id: "ASP002",
-        name: "Fragment of Stubbornness",
-        baseResolve: 25,
-        baseComposure: 5,
-        resonanceGoal: 5,
-        dissonanceThreshold: 4,
-        visibleTraits: [
-            { name: "Unyielding", description: "Reduces all incoming Pressure by 1." },
-            { name: "Provoked by Challenge", description: "Gains +2 Composure when hit by a #Challenge Concept." }
-        ],
-        hiddenTraits: [
-            { name: "Secretly Insecure", description: "Vulnerable to #Understanding Concepts when Composure is 0." }
+            { name: "Craves Certainty", description: "#Reveal Concepts deal +1 Pressure to it." }
         ],
         intents: [
-            { id: "INT002A", name: "Dismissive Glare", description: "Deals 3 Psychological Damage. Player discards 1 random Concept.", functionName: "intentDismissiveGlare" },
-            { id: "INT002B", name: "Reinforce Beliefs", description: "Gains 3 Composure. Builds 1 Dissonance.", functionName: "intentReinforceBeliefs" }
+            { id: "INT_DOUBT_01", name: "Sow Confusion", description: "Attempts to add 1 'Minor Confusion' (Trauma) to player's discard.", functionName: "intentSowConfusion", params: { traumaId: "TRM_MINOR_CONFUSION" } },
+            { id: "INT_DOUBT_02", name: "Whisper Discouragement", description: "Player loses 1 Hope.", functionName: "intentWhisperDiscouragement" },
+            { id: "INT_DOUBT_03", name: "Fade Away", description: "Aspect attempts to disengage after 3 turns if Resolve > 0.", functionName: "intentFadeAway"}
         ],
         rewards: {
-            insight: 10,
-            memoryPool: ["MEM001_Resilience"] // ID of potential memory/artifact
+            insight: 2,
+            // No card/memory rewards from this very minor aspect
         }
     }
-    // ... more aspects
+    // ... more aspects for later game
 };
 
-// --- Location Data (Simplified Example) ---
-// In a real game, this would be much more extensive, possibly in its own file or database
-const LOCATION_DATA_MINIMAL = {
-    "LOC_START_SANCTUARY": {
-        id: "LOC_START_SANCTUARY",
-        name: "The Threshold Sanctum",
-        region: "The Shallows of Awakening",
-        description: "A faintly glowing space, offering a moment of respite before the deeper journey. The air hums with a quiet potential.",
-        type: "Sanctuary", // "Sanctuary", "IsleOfMemory", "ChallengingDomain", "HiddenShrine"
-        actions: ["rest", "shop", "view_ambition", "depart"], // Identifiers for available actions
-        storylets: ["STORY_SANCTUARY_INTRO"], // IDs of storylets available here
-        // connections: { "north": "LOC_WHISPERING_PATH" } // How navigation works
-    },
-    "LOC_WHISPERING_PATH_NODE_1": {
-        id: "LOC_WHISPERING_PATH_NODE_1",
-        name: "A Murmuring Intersection",
-        region: "The Shallows of Awakening",
-        description: "Faint whispers echo around you, too indistinct to grasp but hinting at multiple paths forward.",
-        type: "ExplorationNode",
-        storylets: ["STORY_PATH_CHOICE_A"],
-        // connections: { "north_east": "LOC_ANXIETY_FRINGE", "north_west": "LOC_FORGOTTEN_MEMORY_EDGE" }
+// --- Artifact/Memory Definitions ---
+const MEMORY_DEFINITIONS = {
+    "MEM_TARNISHED_LOCKET": {
+        id: "MEM_TARNISHED_LOCKET",
+        name: "Tarnished Locket",
+        type: "Passive", // Could be "Equippable", "Consumable"
+        description: "A dim, silver locket, cold to the touch. It feels familiar, a phantom weight against a forgotten chest. When Hope is critically low (1 or 0), provides +1 Hope at the start of your 'day' (major rest/new region entry).",
+        // Actual effect logic would be in Player.js or main game loop checks
+        onHopeCriticallyLowFunctionName: "effectTarnishedLocketHope"
     }
-    // ... more locations
 };
 
-// --- Storylet Data (Simplified Example) ---
-const STORYLET_DATA_MINIMAL = {
-    "STORY_SANCTUARY_INTRO": {
-        id: "STORY_SANCTUARY_INTRO",
-        title: "A Moment of Preparation",
-        text: "The Keeper of the Threshold Sanctum regards you with ancient eyes. 'The Inner Sea is vast, Psychonaut. What guidance do you seek before you embark, or are you ready to face the echoes within?'",
+// --- Node Map Data for Intro ---
+const NODE_MAP_DATA = {
+    "NODE_SHATTERED_SHORE": {
+        id: "NODE_SHATTERED_SHORE",
+        name: "The Shattered Shore",
+        shortDesc: "A desolate, rocky outcrop.",
+        position: { x: 50, y: 300 }, // Example coordinates for rendering (percentage or pixels)
+        storyletOnArrival: "STORY_SHORE_ARRIVAL",
+        connections: [] // Initially no connections, revealed by storylet
+    },
+    "NODE_WRECKAGE_OF_THOUGHT": {
+        id: "NODE_WRECKAGE_OF_THOUGHT",
+        name: "Wreckage of a Thought",
+        shortDesc: "Twisted, broken spars of logic.",
+        position: { x: 250, y: 150 },
+        storyletOnArrival: "STORY_WRECKAGE_ARRIVAL",
+        connections: ["NODE_SHATTERED_SHORE"] // Connects back
+    },
+    "NODE_WEEPING_NICHE": {
+        id: "NODE_WEEPING_NICHE",
+        name: "The Weeping Niche",
+        shortDesc: "An alcove of sorrow.",
+        position: { x: 250, y: 450 },
+        storyletOnArrival: "STORY_NICHE_ARRIVAL",
+        connections: ["NODE_SHATTERED_SHORE"] // Connects back
+    },
+    "NODE_THRESHOLD_SANCTUM": {
+        id: "NODE_THRESHOLD_SANCTUM",
+        name: "The Threshold Sanctum",
+        shortDesc: "A beacon of faint, steady light.",
+        position: { x: 450, y: 300 },
+        isSanctuary: true, // Special flag
+        storyletOnArrival: "STORY_SANCTUARY_INTRO_AWAKENING", // New intro storylet for here
+        connections: ["NODE_WRECKAGE_OF_THOUGHT", "NODE_WEEPING_NICHE"] // Connects back
+    }
+};
+
+// --- Location Data (for nodes that are more than just pass-throughs) ---
+// For the intro, most "location" interaction is via storylet on arrival.
+// The Sanctum is the main "Location" with actions.
+const LOCATION_DATA_MINIMAL = { // Renamed as this won't contain ALL nodes
+    "NODE_THRESHOLD_SANCTUM": { // Use Node ID for consistency
+        id: "NODE_THRESHOLD_SANCTUM",
+        name: "The Threshold Sanctum",
+        region: "The Precipice Edge", // A new "region" for the intro area
+        description: "A faintly glowing space, offering a moment of respite. The air hums with a quiet potential. The Keeper watches you.",
+        type: "Sanctuary",
+        actions: ["rest", "shop_intro", "talk_keeper", "view_ambition"], // Specific actions for this intro sanctuary
+        storyletsOnExplore: ["STORY_KEEPER_ADVICE_OPTIONAL"] // Optional storylets if player "explores" again
+    }
+    // Other nodes are primarily driven by their storyletOnArrival from NODE_MAP_DATA
+};
+
+// --- Storylet Data (Expanded for Intro) ---
+const PRE_GAME_INTRO_LINES = [ // For the very start
+    "The edges fray.",
+    "Cohesion... a forgotten luxury.",
+    "Where <em>am</em> I?",
+    "No... <em>what</em> am I becoming?",
+    "Falling.",
+    "Or... surfacing?"
+];
+
+const STORYLET_DATA_MINIMAL = { // Renamed to avoid conflict
+    "STORY_SHORE_ARRIVAL": {
+        id: "STORY_SHORE_ARRIVAL",
+        title: "Adrift",
+        text: "You claw your way onto something solid, though 'solid' feels like a generous term. Jagged, obsidian-like rock presses into you, cold and indifferent. The air is thick with the scent of ozone and something anciently sorrowful. Your thoughts are a fractured mess. A single, primal urge cuts through the fog: to simply *be* aware.",
         choices: [
-            { text: "Ask about the current Ambition.", outcomeFunctionName: "storyOutcomeAskAmbition" },
-            { text: "Inquire about recent disturbances in the Shallows.", outcomeFunctionName: "storyOutcomeAskDisturbances" },
-            { text: "State readiness to depart.", outcomeFunctionName: "storyOutcomeDepartSanctuary" }
+            // Only one choice initially, representing the first card play
+            // This will be handled specially by main.js to use the "Grasp for Awareness" card
+            // For now, let's represent it as a storylet that auto-triggers an action.
+            // This storylet essentially sets the scene, the "Grasp for Awareness" is the actual first *action*.
+        ],
+        autoTriggerAction: "PLAY_GRASP_FOR_AWARENESS" // Special flag for main.js
+    },
+    "STORY_WRECKAGE_ARRIVAL": {
+        id: "STORY_WRECKAGE_ARRIVAL",
+        title: "Splintered Logic",
+        text: "This... this was something. A structure of reason? A carefully constructed argument? Now, just splintered concepts and the lingering heat of its collapse. A faint whisper catches your attention, '<em>...not meant to see...not for you...</em>'",
+        choices: [
+            { text: "Sift through the debris carefully. (Costs 1 Focus)", outcomeFunctionName: "outcomeSiftWreckage", conditionFunctionName: "conditionHasFocus1" },
+            { text: "Focus on the whisper, try to understand.", outcomeFunctionName: "outcomeListenWhisperWreckage" },
+            { text: "Leave it be. This place feels dangerous.", outcomeFunctionName: "outcomeLeaveWreckage" }
         ]
     },
+    "STORY_NICHE_ARRIVAL": {
+        id: "STORY_NICHE_ARRIVAL",
+        title: "The Weeping Niche",
+        text: "A narrow cleft in the rock, damp and cold. The sorrow here is a palpable presence, clinging to you like a shroud. The source of a faint, mournful sound is a single, tear-shaped fungus, pulsing with a faint, melancholy light. It seems to... respond to your proximity.",
+        choices: [
+            { text: "Reach out to the fungus with empathy.", outcomeFunctionName: "outcomeTouchFungusEmpathy" },
+            { text: "Observe the fungus from a distance, analyze it.", outcomeFunctionName: "outcomeObserveFungusCognitive" },
+            { text: "Attempt to harvest the fungus.", outcomeFunctionName: "outcomeHarvestFungus" }
+        ]
+    },
+    "STORY_SANCTUARY_INTRO_AWAKENING": { // New version for intro
+        id: "STORY_SANCTUARY_INTRO_AWAKENING",
+        title: "The Keeper's Gaze",
+        text: "The Keeper of the Threshold Sanctum regards you with ancient, luminous eyes. 'Another stray spark, washed up on the shores of the unthought. You are tattered, child of the surface, more echo than substance. But perhaps not entirely lost. This Threshold is but a small haven in the Inner Sea, the ocean of consciousness. What do you seek from this place, or from me?'",
+        choices: [
+            { text: "\"Where am I? What is this place?\"", outcomeFunctionName: "outcomeKeeperExplainInnerSea" },
+            { text: "\"How do I leave? How do I get back to... before?\"", outcomeFunctionName: "outcomeKeeperExplainReturn" },
+            { text: "\"I feel... broken. Unmade.\"", outcomeFunctionName: "outcomeKeeperOfferRest", conditionFunctionName: "conditionPlayerWounded"},
+            { text: "\"I need to understand these whispers... this sense of loss.\"", outcomeFunctionName: "outcomeKeeperAddressAmbition" }
+        ]
+    },
+    "STORY_KEEPER_ADVICE_OPTIONAL": { // Example of an optional storylet
+        id: "STORY_KEEPER_ADVICE_OPTIONAL",
+        title: "Further Counsel",
+        text: "The Keeper inclines their head. 'You have more questions, or seek a different path now?'",
+        choices: [
+             { text: "Ask about surviving the Inner Sea.", outcomeFunctionName: "outcomeKeeperSurvivalTips" },
+             { text: "Inquire about the nature of 'Concepts'.", outcomeFunctionName: "outcomeKeeperExplainConcepts" },
+             { text: "No more questions for now.", outcomeFunctionName: "outcomeEndConversationWithKeeper" }
+        ]
+    }
     // ... more storylets
 };
-
 
 // --- Persona Stance Definitions (Basic) ---
 const PERSONA_STANCE_DEFINITIONS = {
     "OBSERVER": {
         id: "OBSERVER",
         name: "Observer Stance",
-        description: "A balanced, cautious stance. +1 Focus regeneration during encounters.",
-        // Modifiers would be applied by encounter_manager or player.js
+        description: "A balanced, cautious stance. +1 Focus regeneration at the start of your turn in encounters.",
         modifiers: { focusRegenBonus: 1 }
     },
-    "EMPATH": {
-        id: "EMPATH",
-        name: "Empathic Listener",
-        description: "#Gentle and #Understanding Concepts are more effective. Start encounters with +2 Player Composure.",
-        attunementReq: { psychological: 3 }, // Example requirement
-        modifiers: { gentleBonus: 1, understandingBonus: 1, startComposure: 2 }
-    }
-    // ... more stances
+    // Other stances would be unlocked later
 };
-
-// Make data accessible (if not using ES6 modules, attach to window or a global object)
-// For simplicity in this non-module setup, we might need a global game object later
-// or ensure scripts are loaded in an order that makes these available.
-// For now, they are just consts in this file.

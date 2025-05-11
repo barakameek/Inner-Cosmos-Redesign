@@ -2,9 +2,6 @@
 
 const UIManager = (() => { // Using an IIFE to create a module-like structure
 
-    // --- Cache DOM Elements ---
-    // We'll cache frequently accessed elements to avoid repeated DOM lookups.
-    // This will be populated in an init() function.
     const DOM = {
         // Header
         psychonautNameDisplay: null,
@@ -21,24 +18,33 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         playerHopeValue: null,
         playerDespairBar: null,
         playerDespairValue: null,
-        attunementsListItems: {}, // e.g., attunementsListItems.attraction for the span
+        attunementsListItems: {},
         activeMemoriesList: null,
 
         // World Interaction Panel (Views)
+        preGameIntroView: null, // NEW
+        preGameTitle: null, // NEW
+        preGameTextArea: null, // NEW
+        continueFromPrecipiceButton: null, // NEW
+
         mapView: null,
         locationView: null,
         storyletView: null,
         encounterView: null,
 
-        // Map View
-        mapDisplayArea: null,
-        currentRegionName: null,
-        navigationControls: null,
+        // Map View (Node Map)
+        nodeMapContainer: null, // NEW for node map
+        currentNodeMapName: null, // NEW Title for map view
+        mapNodeInfo: null, // NEW
+        currentNodeNameDisplay: null, // NEW
+        currentNodeDescriptionDisplay: null, // NEW
+        exploreCurrentNodeButton: null, // NEW
 
         // Location View
         locationName: null,
         locationDescription: null,
         locationActions: null,
+        returnToMapFromLocationButton: null, // NEW
 
         // Storylet View
         storyletTitle: null,
@@ -55,11 +61,11 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         aspectTraitsEncounter: null,
         playerFocusEncounter: null,
         playerIntegrityEncounter: null,
+        playerComposureEncounter: null, // Added this
         playerStanceEncounter: null,
         playerHandCards: null,
         endTurnEncounterButton: null,
         revealTraitEncounterButton: null,
-
 
         // Context Panel
         deckCountDisplay: null,
@@ -68,6 +74,7 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         viewDeckButton: null,
         logEntries: null,
         journalEntries: null,
+        addJournalEntryButton: null, // NEW
 
         // Footer
         gameMenuButton: null,
@@ -79,10 +86,14 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         modalGameOver: null,
         gameOverTitle: null,
         gameOverText: null,
+        restartGameButton: null, // NEW
 
         // Tooltip
         tooltip: null,
     };
+
+    let preGameIntroLineIndex = 0;
+    let preGameIntroTimeout = null;
 
     // --- Initialization ---
     function init() {
@@ -101,30 +112,37 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         DOM.playerDespairBar = document.getElementById('player-despair-bar');
         DOM.playerDespairValue = document.getElementById('player-despair-value');
 
-        // Cache attunement spans
         for (const key in ATTUNEMENT_DEFINITIONS) {
             DOM.attunementsListItems[key] = document.getElementById(`attunement-${key.charAt(0).toLowerCase()}`);
         }
         DOM.activeMemoriesList = document.getElementById('active-memories-list');
+
+        DOM.preGameIntroView = document.getElementById('pre-game-intro-view');
+        DOM.preGameTitle = document.getElementById('pre-game-title');
+        DOM.preGameTextArea = document.getElementById('pre-game-text-area');
+        DOM.continueFromPrecipiceButton = document.getElementById('continue-from-precipice');
 
         DOM.mapView = document.getElementById('map-view');
         DOM.locationView = document.getElementById('location-view');
         DOM.storyletView = document.getElementById('storylet-view');
         DOM.encounterView = document.getElementById('encounter-view');
 
-        DOM.mapDisplayArea = document.getElementById('map-display-area');
-        DOM.currentRegionName = document.querySelector('#current-region-name');
-        DOM.navigationControls = document.getElementById('navigation-controls');
+        DOM.nodeMapContainer = document.getElementById('node-map-container');
+        DOM.currentNodeMapName = document.getElementById('current-node-map-name');
+        DOM.mapNodeInfo = document.getElementById('map-node-info');
+        DOM.currentNodeNameDisplay = document.getElementById('current-node-name-display');
+        DOM.currentNodeDescriptionDisplay = document.getElementById('current-node-description-display');
+        DOM.exploreCurrentNodeButton = document.getElementById('explore-current-node-button');
 
         DOM.locationName = document.getElementById('location-name');
         DOM.locationDescription = document.getElementById('location-description');
         DOM.locationActions = document.getElementById('location-actions');
+        DOM.returnToMapFromLocationButton = document.getElementById('return-to-map-from-location');
 
         DOM.storyletTitle = document.getElementById('storylet-title');
         DOM.storyletText = document.getElementById('storylet-text');
         DOM.storyletChoices = document.getElementById('storylet-choices');
 
-        // Encounter View elements
         DOM.aspectNameEncounter = document.getElementById('aspect-name-encounter');
         DOM.aspectResolveEncounter = document.getElementById('aspect-resolve-encounter');
         DOM.aspectComposureEncounter = document.getElementById('aspect-composure-encounter');
@@ -134,6 +152,7 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         DOM.aspectTraitsEncounter = document.getElementById('aspect-traits-encounter');
         DOM.playerFocusEncounter = document.getElementById('player-focus-encounter');
         DOM.playerIntegrityEncounter = document.getElementById('player-integrity-encounter');
+        DOM.playerComposureEncounter = document.getElementById('player-composure-encounter');
         DOM.playerStanceEncounter = document.getElementById('player-stance-encounter');
         DOM.playerHandCards = document.getElementById('player-hand-cards');
         DOM.endTurnEncounterButton = document.getElementById('end-turn-encounter');
@@ -145,6 +164,7 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         DOM.viewDeckButton = document.getElementById('view-deck-button');
         DOM.logEntries = document.getElementById('log-entries');
         DOM.journalEntries = document.getElementById('journal-entries');
+        DOM.addJournalEntryButton = document.getElementById('add-journal-entry-button');
 
         DOM.gameMenuButton = document.getElementById('game-menu-button');
 
@@ -154,16 +174,16 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         DOM.modalGameOver = document.getElementById('modal-game-over');
         DOM.gameOverTitle = document.getElementById('game-over-title');
         DOM.gameOverText = document.getElementById('game-over-text');
+        DOM.restartGameButton = document.getElementById('restart-game-button');
 
         DOM.tooltip = document.getElementById('tooltip');
-
         console.log("UIManager initialized and DOM elements cached.");
     }
 
     // --- Helper Functions ---
     function _updateBar(barElement, value, maxValue) {
-        if (barElement && maxValue > 0) {
-            const percentage = Math.max(0, Math.min(100, (value / maxValue) * 100));
+        if (barElement && typeof value === 'number' && typeof maxValue === 'number' && maxValue >= 0) {
+            const percentage = maxValue === 0 ? 0 : Math.max(0, Math.min(100, (value / maxValue) * 100));
             barElement.style.width = percentage + '%';
         } else if (barElement) {
             barElement.style.width = '0%';
@@ -175,13 +195,21 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
             element.textContent = text;
         }
     }
+    function _setHTML(element, html) {
+        if (element) {
+            element.innerHTML = html;
+        }
+    }
 
     // --- View Management ---
-    function showView(viewToShow) {
-        const views = [DOM.mapView, DOM.locationView, DOM.storyletView, DOM.encounterView];
+    function showView(viewToShowId) { // Pass ID of the view to show
+        const views = [
+            DOM.preGameIntroView, DOM.mapView, DOM.locationView,
+            DOM.storyletView, DOM.encounterView
+        ];
         views.forEach(view => {
-            if (view) { // Check if element exists
-                if (view === viewToShow) {
+            if (view) {
+                if (view.id === viewToShowId) {
                     view.classList.remove('view-hidden');
                     view.classList.add('view-active');
                 } else {
@@ -192,22 +220,52 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         });
     }
 
+    // --- Pre-Game Intro ---
+    function startPreGameIntro() {
+        showView('pre-game-intro-view');
+        preGameIntroLineIndex = 0;
+        if (DOM.preGameTextArea) DOM.preGameTextArea.innerHTML = ''; // Clear previous lines
+        if (DOM.continueFromPrecipiceButton) DOM.continueFromPrecipiceButton.classList.add('view-hidden');
+        _displayNextPreGameLine();
+    }
+
+    function _displayNextPreGameLine() {
+        if (preGameIntroLineIndex < PRE_GAME_INTRO_LINES.length) {
+            const p = document.createElement('p');
+            p.classList.add('intro-line');
+            p.innerHTML = PRE_GAME_INTRO_LINES[preGameIntroLineIndex]; // Use innerHTML for <em>
+            if (DOM.preGameTextArea) DOM.preGameTextArea.appendChild(p);
+            preGameIntroLineIndex++;
+            // CSS animation handles the fade-in of the line itself
+            preGameIntroTimeout = setTimeout(_displayNextPreGameLine, CONFIG.PRE_GAME_INTRO_LINE_DELAY);
+        } else {
+            // All lines displayed, show the continue button
+            if (DOM.continueFromPrecipiceButton) {
+                 DOM.continueFromPrecipiceButton.classList.remove('view-hidden');
+                 // Add animation to button if desired
+            }
+        }
+    }
+
+    function clearPreGameIntroTimeout() { // To stop timeout if player clicks early
+        if (preGameIntroTimeout) {
+            clearTimeout(preGameIntroTimeout);
+            preGameIntroTimeout = null;
+        }
+    }
+
+
     // --- Player Status Updates ---
     function updatePlayerStats(playerData) {
         if (!playerData) return;
-
         _setText(DOM.playerIntegrityValue, `${playerData.integrity}/${playerData.maxIntegrity}`);
         _updateBar(DOM.playerIntegrityBar, playerData.integrity, playerData.maxIntegrity);
-
         _setText(DOM.playerFocusValue, `${playerData.focus}/${playerData.maxFocus}`);
         _updateBar(DOM.playerFocusBar, playerData.focus, playerData.maxFocus);
-
         _setText(DOM.playerClarityValue, `${playerData.clarity}/${playerData.maxClarity}`);
         _updateBar(DOM.playerClarityBar, playerData.clarity, playerData.maxClarity);
-
         _setText(DOM.playerHopeValue, `${playerData.hope}/${playerData.maxHope}`);
         _updateBar(DOM.playerHopeBar, playerData.hope, playerData.maxHope);
-
         _setText(DOM.playerDespairValue, `${playerData.despair}/${playerData.maxDespair}`);
         _updateBar(DOM.playerDespairBar, playerData.despair, playerData.maxDespair);
 
@@ -222,74 +280,101 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
 
     function updateActiveMemories(memoriesArray) {
         if (!DOM.activeMemoriesList) return;
-        DOM.activeMemoriesList.innerHTML = ''; // Clear old memories
+        DOM.activeMemoriesList.innerHTML = '';
         if (memoriesArray && memoriesArray.length > 0) {
-            memoriesArray.forEach(memory => {
+            memoriesArray.forEach(memory => { // Assuming memory is an object with 'name'
                 const li = document.createElement('li');
-                // Assuming memory is an object with a 'name' property
-                li.textContent = memory.name || memory; // Fallback if it's just a string
+                li.textContent = memory.name || memory;
                 DOM.activeMemoriesList.appendChild(li);
             });
         } else {
-            const li = document.createElement('li');
-            li.innerHTML = `<span class="placeholder">No active memories</span>`;
-            DOM.activeMemoriesList.appendChild(li);
+            _setHTML(DOM.activeMemoriesList, `<li><span class="placeholder">No memories stir...</span></li>`);
         }
     }
 
-    // --- World Interaction Updates ---
-    function updateMapView(worldData) {
-        if (!worldData || !worldData.currentLocation) return;
-        _setText(DOM.currentRegionName, worldData.currentLocation.region || "Unknown Region");
-        // More complex map rendering would go here (e.g., text-based, or drawing on a canvas)
-        if (DOM.mapDisplayArea) {
-            DOM.mapDisplayArea.innerHTML = `<p>${worldData.currentLocation.description || "You are somewhere in the Inner Sea."}</p>`;
-            DOM.mapDisplayArea.innerHTML += `<p>Current Region: <span id="current-region-name" class="value">${worldData.currentLocation.region || "Unknown Region"}</span></p>`;
-             // Re-assign because innerHTML overwrites
-            DOM.currentRegionName = DOM.mapDisplayArea.querySelector('#current-region-name');
+    // --- World Interaction Updates (Node Map) ---
+    function renderNodeMap(allNodes, currentNodeId, accessibleNodeIds = []) {
+        if (!DOM.nodeMapContainer) return;
+        DOM.nodeMapContainer.innerHTML = ''; // Clear previous map
+
+        // Basic rendering: create divs for each node
+        // A real implementation might use SVG for lines and more complex positioning.
+        for (const nodeId in allNodes) {
+            const nodeData = allNodes[nodeId];
+            const nodeEl = document.createElement('div');
+            nodeEl.classList.add('map-node');
+            nodeEl.dataset.nodeId = nodeId;
+            nodeEl.style.left = `${nodeData.position.x}%`; // Use percentages for responsiveness
+            nodeEl.style.top = `${nodeData.position.y}%`;  // Or fixed pixels
+
+            nodeEl.innerHTML = `<span class="map-node-name">${nodeData.name}</span><span class="map-node-type">${nodeData.type || nodeData.shortDesc || ""}</span>`;
+
+            if (nodeId === currentNodeId) {
+                nodeEl.classList.add('current');
+            }
+            if (accessibleNodeIds.includes(nodeId) && nodeId !== currentNodeId) {
+                nodeEl.classList.add('accessible');
+            } else if (nodeId !== currentNodeId) {
+                nodeEl.classList.add('inaccessible'); // Or 'locked' based on game logic
+            }
+            DOM.nodeMapContainer.appendChild(nodeEl);
         }
+        // TODO: Draw connection lines (e.g., using SVG or by absolutely positioned divs)
+        // This is complex and omitted for this skeleton.
     }
 
-    function displayLocation(locationData) {
+    function updateCurrentNodeInfo(nodeData) {
+        if (!nodeData) {
+            _setText(DOM.currentNodeMapName, "The Uncharted Void");
+            _setText(DOM.currentNodeNameDisplay, "Lost");
+            _setHTML(DOM.currentNodeDescriptionDisplay, "Your senses fail to grasp this place.");
+            return;
+        }
+        _setText(DOM.currentNodeMapName, nodeData.name); // For the h2 title of map view
+        _setText(DOM.currentNodeNameDisplay, nodeData.name);
+        _setHTML(DOM.currentNodeDescriptionDisplay, nodeData.shortDesc || nodeData.description || "An unknown space.");
+    }
+
+
+    function displayLocation(locationData) { // For Sanctuaries / complex hubs
         if (!locationData) return;
-        showView(DOM.locationView);
+        showView('location-view');
         _setText(DOM.locationName, locationData.name);
-        if (DOM.locationDescription) {
-            DOM.locationDescription.innerHTML = `<p>${locationData.description}</p>`;
-        }
-        // Populate location actions dynamically
+        _setHTML(DOM.locationDescription, `<p>${locationData.description || "..."}</p>`);
+
         if (DOM.locationActions) {
-            DOM.locationActions.innerHTML = '<h3>Actions:</h3>'; // Clear old actions
+            DOM.locationActions.innerHTML = '<h3>Actions:</h3>';
             if (locationData.actions && locationData.actions.length > 0) {
                 locationData.actions.forEach(actionId => {
-                    // In a real game, actionId would map to a defined action
                     const button = document.createElement('button');
                     button.dataset.action = actionId;
-                    button.textContent = actionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Prettify
+                    button.textContent = actionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     DOM.locationActions.appendChild(button);
                 });
             }
-            const leaveButton = document.createElement('button');
-            leaveButton.dataset.action = "leave-location";
-            leaveButton.textContent = "Return to Navigation";
-            DOM.locationActions.appendChild(leaveButton);
+            // The "Return to Navigation" button is static in HTML, just ensure it's visible
+            if (DOM.returnToMapFromLocationButton) DOM.returnToMapFromLocationButton.classList.remove('view-hidden');
         }
     }
 
     function displayStorylet(storyletData) {
         if (!storyletData) return;
-        showView(DOM.storyletView);
+        showView('storylet-view');
         _setText(DOM.storyletTitle, storyletData.title);
-        if (DOM.storyletText) {
-            DOM.storyletText.innerHTML = `<p>${storyletData.text.replace(/\n/g, '</p><p>')}</p>`; // Handle newlines
-        }
+        _setHTML(DOM.storyletText, `<p>${(storyletData.text || "").replace(/\n/g, '</p><p>')}</p>`);
+
         if (DOM.storyletChoices) {
-            DOM.storyletChoices.innerHTML = '<h3>Choices:</h3>'; // Clear old choices
+            DOM.storyletChoices.innerHTML = '<h3>Choices:</h3>';
             if (storyletData.choices && storyletData.choices.length > 0) {
                 storyletData.choices.forEach((choice, index) => {
                     const button = document.createElement('button');
-                    button.dataset.choiceIndex = index; // Use index for simplicity
+                    button.dataset.choiceIndex = index;
                     button.textContent = choice.text;
+                    // Disable choice if condition not met (logic in StoryletManager, UI reflects)
+                    if (choice.disabled) {
+                        button.disabled = true;
+                        button.title = choice.disabledReason || "Cannot choose this option";
+                    }
                     DOM.storyletChoices.appendChild(button);
                 });
             }
@@ -297,54 +382,56 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
     }
 
     // --- Encounter View Updates ---
-    function displayEncounterView(aspectData, playerData) {
-        showView(DOM.encounterView);
-        if (!aspectData || !playerData) return;
+    function displayEncounterView(aspectData, playerData, playerEncounterState) { // Added playerEncounterState
+        showView('encounter-view');
+        if (!aspectData || !playerData || !playerEncounterState) return;
 
         _setText(DOM.aspectNameEncounter, aspectData.name);
         _setText(DOM.aspectResolveEncounter, `${aspectData.resolve}/${aspectData.maxResolve}`);
         _setText(DOM.aspectComposureEncounter, aspectData.composure);
         _setText(DOM.aspectResonanceEncounter, `${aspectData.resonance}/${aspectData.resonanceGoal}`);
         _setText(DOM.aspectDissonanceEncounter, `${aspectData.dissonance}/${aspectData.dissonanceThreshold}`);
-        _setText(DOM.aspectIntentEncounter, aspectData.currentIntent ? aspectData.currentIntent.description : "Thinking...");
+        _setText(DOM.aspectIntentEncounter, aspectData.currentIntent ? aspectData.currentIntent.description : "Scheming...");
 
         if (DOM.aspectTraitsEncounter) {
             DOM.aspectTraitsEncounter.innerHTML = '';
-            aspectData.visibleTraits.forEach(trait => {
-                const li = document.createElement('li');
-                li.textContent = `${trait.name}: ${trait.description}`;
-                DOM.aspectTraitsEncounter.appendChild(li);
-            });
-            aspectData.hiddenTraits.forEach(trait => { // Show revealed hidden traits
-                 if (aspectData.revealedTraits && aspectData.revealedTraits.includes(trait.name)) {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<em>(Revealed)</em> ${trait.name}: ${trait.description}`;
-                    DOM.aspectTraitsEncounter.appendChild(li);
-                } else {
-                    // Could add a placeholder for hidden ones if desired
+            (aspectData.visibleTraits || []).forEach(trait => _addTraitLi(trait.name, trait.description));
+            (aspectData.hiddenTraits || []).forEach(trait => {
+                if (aspectData.revealedTraits && aspectData.revealedTraits.includes(trait.name)) {
+                    _addTraitLi(trait.name, trait.description, true);
                 }
             });
+        }
+        function _addTraitLi(name, description, isRevealed = false) {
+            const li = document.createElement('li');
+            li.innerHTML = `${isRevealed ? '<em>(Revealed)</em> ' : ''}<strong>${name}:</strong> ${description}`;
+            DOM.aspectTraitsEncounter.appendChild(li);
         }
 
         _setText(DOM.playerFocusEncounter, `${playerData.focus}/${playerData.maxFocus}`);
         _setText(DOM.playerIntegrityEncounter, `${playerData.integrity}/${playerData.maxIntegrity}`);
-        _setText(DOM.playerStanceEncounter, playerData.personaStance ? playerData.personaStance.name : "None");
+        _setText(DOM.playerComposureEncounter, playerEncounterState.composure); // Display player's encounter composure
+        _setText(DOM.playerStanceEncounter, playerData.activePersonaStance ? playerData.activePersonaStance.name : "None");
     }
 
-    function updatePlayerHand(hand) { // hand is an array of card objects
+    function updatePlayerHand(handCardDefinitions) { // Expects array of full card def objects
         if (!DOM.playerHandCards) return;
-        DOM.playerHandCards.innerHTML = ''; // Clear current hand
-        if (hand && hand.length > 0) {
-            hand.forEach(cardData => { // cardData from CONCEPT_CARD_DEFINITIONS
+        DOM.playerHandCards.innerHTML = '';
+        if (handCardDefinitions && handCardDefinitions.length > 0) {
+            handCardDefinitions.forEach(cardDef => {
                 const cardEl = document.createElement('div');
-                cardEl.classList.add('encounter-card-placeholder'); // Use placeholder style for now
-                cardEl.dataset.cardId = cardData.id;
-                cardEl.innerHTML = `<strong>${cardData.name}</strong><br><small>Cost: ${cardData.cost}F</small><br><small>${cardData.keywords.join(', ')}</small>`;
-                // Add event listener for playing the card (handled by encounter_manager)
+                cardEl.classList.add('encounter-card-placeholder'); // Re-using class, but now it's styled better
+                cardEl.dataset.cardId = cardDef.id;
+                cardEl.innerHTML = `
+                    <div class="card-name-encounter">${cardDef.name} <span class="card-cost-encounter">${cardDef.cost}F</span></div>
+                    <div class="card-type-encounter">${cardDef.type} - ${cardDef.attunement}</div>
+                    <div class="card-desc-encounter">${cardDef.description}</div>
+                    <div class="card-keywords-encounter">${(cardDef.keywords || []).join(', ')}</div>
+                `;
                 DOM.playerHandCards.appendChild(cardEl);
             });
         } else {
-            DOM.playerHandCards.innerHTML = `<span class="placeholder">No concepts in hand.</span>`;
+            _setHTML(DOM.playerHandCards, `<span class="placeholder">No concepts in hand.</span>`);
         }
     }
 
@@ -356,19 +443,13 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         _setText(DOM.traumaCountDisplay, traumaCount);
     }
 
-    function addLogEntry(message, type = "normal") { // type can be 'normal', 'system', 'error', 'reward'
+    function addLogEntry(message, type = "normal") {
         if (!DOM.logEntries) return;
         const p = document.createElement('p');
-        p.classList.add('log-entry');
-        if (type) {
-            p.classList.add(type); // For specific styling
-        }
-        p.textContent = message;
+        p.classList.add('log-entry', type); // Add base and specific type class
+        p.innerHTML = message; // Use innerHTML if message contains formatting
         DOM.logEntries.appendChild(p);
-        // Auto-scroll to bottom
         DOM.logEntries.scrollTop = DOM.logEntries.scrollHeight;
-
-        // Optional: Trim log if it gets too long
         if (DOM.logEntries.children.length > (CONFIG.LOG_MAX_ENTRIES || 50)) {
             DOM.logEntries.removeChild(DOM.logEntries.firstChild);
         }
@@ -376,26 +457,32 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
 
     function addJournalEntry(title, text) {
         if (!DOM.journalEntries) return;
-        const entryDiv = document.createElement('div'); // Could be a p or more complex
+        if (DOM.journalEntries.querySelector('.placeholder')) {
+            DOM.journalEntries.innerHTML = ''; // Clear placeholder if it's the first entry
+        }
+        const entryDiv = document.createElement('div');
         entryDiv.classList.add('journal-entry');
-        entryDiv.innerHTML = `<span class="entry-title">${title}:</span> ${text}`;
+        entryDiv.innerHTML = `<span class="entry-title">${title}:</span> ${text.replace(/\n/g, '<br>')}`;
         DOM.journalEntries.appendChild(entryDiv);
         DOM.journalEntries.scrollTop = DOM.journalEntries.scrollHeight;
-
         if (DOM.journalEntries.children.length > (CONFIG.JOURNAL_MAX_ENTRIES || 20)) {
             DOM.journalEntries.removeChild(DOM.journalEntries.firstChild);
         }
     }
 
     // --- Modal Management ---
-    function showModal(modalElement) {
-        if (DOM.modalOverlay && modalElement) {
-            // Hide all other modals first
+    function showModal(modalContentElementId) { // Pass ID of the modal content to show
+        if (DOM.modalOverlay) {
             const allModals = DOM.modalOverlay.querySelectorAll('.modal-content');
             allModals.forEach(mod => mod.classList.add('view-hidden'));
 
-            modalElement.classList.remove('view-hidden');
-            DOM.modalOverlay.classList.remove('view-hidden');
+            const targetModal = document.getElementById(modalContentElementId);
+            if (targetModal) {
+                targetModal.classList.remove('view-hidden');
+                DOM.modalOverlay.classList.remove('view-hidden');
+            } else {
+                console.error("Modal content not found:", modalContentElementId);
+            }
         }
     }
 
@@ -407,25 +494,25 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         }
     }
 
-    function displayFullDeck(deckArray) { // deckArray is array of card objects
+    function displayFullDeck(deckCardDefinitions) {
         if (!DOM.fullDeckList) return;
         DOM.fullDeckList.innerHTML = '';
-        if (deckArray && deckArray.length > 0) {
-            deckArray.forEach(cardData => {
+        if (deckCardDefinitions && deckCardDefinitions.length > 0) {
+            deckCardDefinitions.forEach(cardDef => {
                 const li = document.createElement('li');
-                li.textContent = `${cardData.name} (Cost: ${cardData.cost}F) - ${cardData.description}`;
+                li.innerHTML = `<strong>${cardDef.name}</strong> (Cost: ${cardDef.cost}F) <br><small><em>${cardDef.type} - ${cardDef.attunement}</em></small><br><small>${cardDef.description}</small>`;
                 DOM.fullDeckList.appendChild(li);
             });
         } else {
-            DOM.fullDeckList.innerHTML = `<li>Your deck is empty.</li>`;
+            _setHTML(DOM.fullDeckList, `<li>Your deck is empty.</li>`);
         }
-        showModal(DOM.modalDeckView);
+        showModal('modal-deck-view');
     }
 
     function displayGameOver(title, message) {
-        if (DOM.gameOverTitle) _setText(DOM.gameOverTitle, title);
-        if (DOM.gameOverText) _setText(DOM.gameOverText, message);
-        showModal(DOM.modalGameOver);
+        _setText(DOM.gameOverTitle, title);
+        _setText(DOM.gameOverText, message);
+        showModal('modal-game-over');
     }
 
     // --- Tooltip Management ---
@@ -433,13 +520,11 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         if (!DOM.tooltip) return;
         DOM.tooltip.innerHTML = content;
         DOM.tooltip.classList.remove('view-hidden');
-        moveTooltip(event); // Initial position
+        moveTooltip(event);
     }
 
     function hideTooltip() {
-        if (DOM.tooltip) {
-            DOM.tooltip.classList.add('view-hidden');
-        }
+        if (DOM.tooltip) DOM.tooltip.classList.add('view-hidden');
     }
 
     function moveTooltip(event) {
@@ -447,49 +532,45 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         let x = event.clientX + 15;
         let y = event.clientY + 15;
         const tooltipRect = DOM.tooltip.getBoundingClientRect();
-        // Basic boundary check to prevent tooltip from going off-screen
-        if (x + tooltipRect.width > window.innerWidth) {
-            x = event.clientX - tooltipRect.width - 15;
-        }
-        if (y + tooltipRect.height > window.innerHeight) {
-            y = event.clientY - tooltipRect.height - 15;
-        }
+        if (x + tooltipRect.width > window.innerWidth) x = event.clientX - tooltipRect.width - 15;
+        if (y + tooltipRect.height > window.innerHeight) y = event.clientY - tooltipRect.height - 15;
         DOM.tooltip.style.left = `${x}px`;
         DOM.tooltip.style.top = `${y}px`;
     }
 
-
-    // --- Public API ---
-    // Expose only the functions that other modules need to call
     return {
         init,
+        // Pre-Game
+        startPreGameIntro,
+        clearPreGameIntroTimeout,
+        // Player
         updatePlayerStats,
         updateActiveMemories,
+        // Views
         showView,
-        updateMapView,
+        // Map
+        renderNodeMap,
+        updateCurrentNodeInfo,
+        // Location
         displayLocation,
+        // Storylet
         displayStorylet,
+        // Encounter
         displayEncounterView,
         updatePlayerHand,
+        // Context
         updateDeckInfo,
         addLogEntry,
         addJournalEntry,
-        showModal,
+        // Modals
+        showModal, // Now takes modal content ID
         hideModals,
         displayFullDeck,
         displayGameOver,
+        // Tooltip
         showTooltip,
         hideTooltip,
         moveTooltip,
-        // Expose DOM elements if needed by other modules for event listeners, though it's often cleaner
-        // to set up event listeners within UIManager or have main.js coordinate.
-        // For now, let's keep it minimal.
-        getDOMElement: (elementName) => DOM[elementName] // Provide controlled access if needed
+        getDOMElement: (elementName) => DOM[elementName]
     };
-
 })();
-
-// Event listener to initialize UIManager once DOM is loaded
-// This should ideally be called from main.js after all scripts are loaded.
-// document.addEventListener('DOMContentLoaded', UIManager.init);
-// For now, we'll assume main.js will handle the calling order.

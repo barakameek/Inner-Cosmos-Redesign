@@ -15,7 +15,7 @@ const Game = (() => {
     let currentMapNodeId = null; 
 
     function init() {
-        console.log("Sunless Psyche Main (v2 Awakening - FULL CODE): Initializing...");
+        console.log("Sunless Psyche Main (v2 Awakening - Full Code v3): Initializing...");
         isGameOver = false;
         preGameIntroActive = true;
 
@@ -28,7 +28,7 @@ const Game = (() => {
         _setupGlobalEventListeners();
         _startGameSequence();
 
-        console.log("Sunless Psyche Main (v2 Awakening - FULL CODE): Initialization complete.");
+        console.log("Sunless Psyche Main (v2 Awakening - Full Code v3): Initialization complete.");
     }
 
     function _startGameSequence() {
@@ -157,14 +157,26 @@ const Game = (() => {
                 uiMgr.displayLocation(node.locationDetails); 
                 return; 
             } 
-            let storyletToStartId = node.storyletOnArrival; 
+            
+            let storyletToStartId = null;
+            if (!node.arrivalStoryletCompleted && node.storyletOnArrival) {
+                storyletToStartId = node.storyletOnArrival;
+            } else if (node.locationDetails && node.locationDetails.storyletsOnExplore && node.locationDetails.storyletsOnExplore.length > 0) {
+                storyletToStartId = node.locationDetails.storyletsOnExplore[0]; 
+            } else if (node.storyletOnArrival && node.arrivalStoryletCompleted) {
+                 uiMgr.addLogEntry(`You've already contemplated the essence of ${node.name}.`, "system");
+                 switchToNodeMapView(); 
+                 return;
+            }
+
             if (storyletToStartId && STORYLET_DATA_MINIMAL[storyletToStartId]) { 
                 _switchToView('storylet-view'); 
                 const storyletInstance = storyletMgr.startStorylet(storyletToStartId); 
                 if(storyletInstance) uiMgr.displayStorylet(storyletInstance); 
                 else switchToNodeMapView(); 
             } else { 
-                uiMgr.addLogEntry("There's nothing more of immediate note here.", "system"); 
+                uiMgr.addLogEntry("There's nothing more of immediate note here to explore via storylet.", "system"); 
+                switchToNodeMapView();
             } 
         } 
     }
@@ -173,8 +185,8 @@ const Game = (() => {
         if (isGameOver || encounterMgr.isActive()) return; 
         const locationNode = currentWorld.getNodeData(currentMapNodeId); 
         if (!locationNode || !locationNode.isSanctuary || !locationNode.locationDetails) { 
-            uiMgr.addLogEntry("No specific location actions here.", "warning"); 
-            return; 
+             uiMgr.addLogEntry("No specific location actions here.", "warning"); 
+             return; 
         } 
         uiMgr.addLogEntry(`Location action: ${actionId}`, "action"); 
         switch (actionId) { 

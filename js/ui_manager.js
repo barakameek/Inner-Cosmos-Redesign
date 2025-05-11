@@ -1,91 +1,305 @@
-// js/config.js
+// js/ui_manager.js
 
-// --- Initial Game Configurations & Constants ---
-const CONFIG = {
-    INITIAL_PSYCHONAUT_NAME: "The Awakened",
-    INITIAL_AMBITION_TEXT: "To Grasp What Was Lost",
-    MAX_HAND_SIZE: 5,
-    INITIAL_CARD_DRAW_ENCOUNTER: 3,
-    AWAKENING_DECK_INITIAL_DRAW: 1,
-    TURN_START_CARD_DRAW: 1,
-    LOG_MAX_ENTRIES: 50,
-    JOURNAL_MAX_ENTRIES: 20,
-    PRE_GAME_INTRO_LINE_DELAY: 1800, // Adjusted delay slightly
-    PRE_GAME_INTRO_FADE_DURATION: 1500,
-};
+const UIManager = (() => { // Using an IIFE to create a module-like structure
 
-// --- Player Initial Stats & Resources (For "The Precipice" Start) ---
-const PLAYER_INITIAL_STATS = {
-    integrity: 10, maxIntegrity: 10,
-    focus: 1, maxFocus: 1,
-    clarity: 1, maxClarity: 20,
-    hope: 0, maxHope: 10,
-    despair: 7, maxDespair: 10,
-    insight: 0,
-    attunements: { attraction: 0, interaction: 0, sensory: 0, psychological: 0, cognitive: 0, relational: 0, rolefocus: 0, },
-    memories: [], personaStance: null,
-};
+    const DOM = {
+        // Header
+        psychonautNameDisplay: null,
+        currentAmbitionDisplay: null,
 
-// --- Attunement Definitions ---
-const ATTUNEMENT_DEFINITIONS = {
-    attraction: { name: "Attraction (A)", description: "Influence through allure, magnetism, and understanding of desire." },
-    interaction: { name: "Interaction (I)", description: "Direct engagement, confrontation, setting boundaries, and debate." },
-    sensory: { name: "Sensory (S)", description: "Perception, body awareness, managing sensory input, finding meaning in raw experience." },
-    psychological: { name: "Psychological (P)", description: "Empathy, intuition, emotional understanding, therapeutic approaches." },
-    cognitive: { name: "Cognitive (C)", description: "Logic, analysis, pattern recognition, intellectual detachment." },
-    relational: { name: "Relational (R)", description: "Understanding connection, roles, dependency, and group dynamics." },
-    rolefocus: { name: "RoleFocus (RF)", description: "Adopting personas, performance, and control through defined roles." }
-};
+        // Player Status Panel
+        playerIntegrityBar: null,
+        playerIntegrityValue: null,
+        playerFocusBar: null,
+        playerFocusValue: null,
+        playerClarityBar: null,
+        playerClarityValue: null,
+        playerHopeBar: null,
+        playerHopeValue: null,
+        playerDespairBar: null,
+        playerDespairValue: null,
+        attunementsListItems: {},
+        activeMemoriesList: null,
 
-// --- Concept Card Definitions ---
-const CONCEPT_CARD_DEFINITIONS = {
-    "AWK001": { id: "AWK001", name: "Grasp for Awareness", type: "Technique", attunement: "Cognitive", cost: 0, keywords: ["#Focus", "#Draw"], description: "A primal urge to understand. Gain 1 Focus. Draw 1 card from your Awakening insights.", effectFunctionName: "playGraspForAwareness" },
-    "AWK002": { id: "AWK002", name: "Fragmented Memory: The Fall", type: "Insight", attunement: "Cognitive", cost: 1, keywords: ["#Reveal", "#Clarity", "#TraumaSource"], description: "Witness a sliver of how you arrived. Gain 2 Clarity. Add 'Disorientation' (Trauma) to your discard pile.", effectFunctionName: "playFragmentedMemoryTheFall" },
-    "AWK003": { id: "AWK003", name: "Echo of a Name", type: "Technique", attunement: "Psychological", cost: 1, keywords: ["#Self", "#Heal", "#IntegrityBoost"], description: `Recall a faint echo. Your name is ${CONFIG.INITIAL_PSYCHONAUT_NAME}. Gain +40 Max Integrity. Heal 20 Integrity. Gain +2 Max Focus. Restore 2 Focus.`, effectFunctionName: "playEchoOfAName" },
-    "AWK004": { id: "AWK004", name: "Primal Fear", type: "Expression", attunement: "Interaction", cost: 1, keywords: ["#Pressure", "#Fear", "#DissonanceSource"], description: "A raw, instinctual reaction. Apply 3 'Fear' (Pressure) to an unformed threat. Builds 1 Dissonance with self.", effectFunctionName: "playPrimalFear" },
-    "TRM001": { id: "TRM001", name: "Disorientation", type: "Trauma", attunement: "None", cost: 0, keywords: ["#Clutter", "#Debuff"], description: "When drawn: All Concepts cost +1 Focus this turn unless 1 Clarity is spent to negate this effect.", onDrawFunctionName: "onDrawDisorientation", effectFunctionName: "playDisorientation" },
-    "CON001": { id: "CON001", name: "Shared Sorrow", type: "Expression", attunement: "Psychological", cost: 1, keywords: ["#Gentle", "#Resonate", "#Heal"], description: "Connect with sadness. Build 2 Resonance with Aspects having 'Sadness' or 'Wounded' traits. Heal 1 Player Integrity.", effectFunctionName: "playSharedSorrow" },
-    "CON002": { id: "CON002", name: "Detached Observation", type: "Technique", attunement: "Cognitive", cost: 0, keywords: ["#Reveal", "#Draw", "#FocusCostReduce"], description: "Objectively assess. The next card played that reveals an Aspect Trait costs 1 less Focus. Draw 1 card.", effectFunctionName: "playDetachedObservation" }
-};
+        // World Interaction Panel (Views)
+        preGameIntroView: null,
+        preGameTitle: null,
+        preGameTextArea: null,
+        continueFromPrecipiceButton: null,
 
-const PLAYER_INITIAL_AWAKENING_HAND = ["AWK001"];
-const PLAYER_AWAKENING_DECK_CONTENTS = ["AWK002", "AWK003", "AWK004"];
-const PLAYER_INITIAL_DECK = [];
+        mapView: null,
+        locationView: null,
+        storyletView: null,
+        encounterView: null,
 
-const ASPECT_TEMPLATES = {
-    "ASP_LINGERING_DOUBT": { id: "ASP_LINGERING_DOUBT", name: "Lingering Doubt", baseResolve: 5, baseComposure: 0, resonanceGoal: 2, dissonanceThreshold: 3, visibleTraits: [ { name: "Ephemeral", description: "Fades if not addressed quickly." }, { name: "Feeds on Negativity", description: "Gains 1 Composure if player plays a card that builds Dissonance with self."} ], hiddenTraits: [ { name: "Craves Certainty", description: "#Reveal Concepts deal +1 Pressure to it." } ], intents: [ { id: "INT_DOUBT_01", name: "Sow Confusion", description: "Attempts to add 1 'Minor Confusion' (Trauma) to player's discard.", functionName: "intentSowConfusion", params: { traumaId: "TRM001" } }, { id: "INT_DOUBT_02", name: "Whisper Discouragement", description: "Player loses 1 Hope.", functionName: "intentWhisperDiscouragement" }, { id: "INT_DOUBT_03", name: "Fade Away", description: "Aspect attempts to disengage after 2 turns if Resolve > 0.", functionName: "intentFadeAway"} ], rewards: { insight: 2 } }
-};
+        // Map View (Node Map)
+        nodeMapContainer: null,
+        currentNodeMapName: null,
+        mapNodeInfo: null,
+        currentNodeNameDisplay: null,
+        currentNodeDescriptionDisplay: null,
+        exploreCurrentNodeButton: null,
 
-const MEMORY_DEFINITIONS = {
-    "MEM_TARNISHED_LOCKET": { id: "MEM_TARNISHED_LOCKET", name: "Tarnished Locket", type: "Passive", description: "A dim, silver locket, cold to the touch. When Hope is critically low (1 or 0), provides +1 Hope at the start of your 'day' (e.g. encounter turn).", onHopeCriticallyLowFunctionName: "effectTarnishedLocketHope" }
-};
+        // Location View
+        locationName: null,
+        locationDescription: null,
+        locationActions: null,
+        returnToMapFromLocationButton: null,
 
-const NODE_MAP_DATA = {
-    "NODE_SHATTERED_SHORE": { id: "NODE_SHATTERED_SHORE", name: "The Shattered Shore", shortDesc: "A desolate, rocky outcrop where consciousness frays.", position: { x: 20, y: 50 }, storyletOnArrival: "STORY_SHORE_ARRIVAL", connections: [] },
-    "NODE_WRECKAGE_OF_THOUGHT": { id: "NODE_WRECKAGE_OF_THOUGHT", name: "Wreckage of a Thought", shortDesc: "Twisted, broken spars of logic, still warm.", position: { x: 50, y: 25 }, storyletOnArrival: "STORY_WRECKAGE_ARRIVAL", connections: ["NODE_SHATTERED_SHORE"] },
-    "NODE_WEEPING_NICHE": { id: "NODE_WEEPING_NICHE", name: "The Weeping Niche", shortDesc: "An alcove of palpable sorrow, faintly luminous.", position: { x: 50, y: 75 }, storyletOnArrival: "STORY_NICHE_ARRIVAL", connections: ["NODE_SHATTERED_SHORE"] },
-    "NODE_THRESHOLD_SANCTUM": { id: "NODE_THRESHOLD_SANCTUM", name: "The Threshold Sanctum", shortDesc: "A beacon of faint, steady light; a fragile haven.", position: { x: 80, y: 50 }, isSanctuary: true, storyletOnArrival: "STORY_SANCTUARY_INTRO_AWAKENING", connections: ["NODE_WRECKAGE_OF_THOUGHT", "NODE_WEEPING_NICHE"] },
-    "NODE_ARCHIVES_OF_REGRET_ENTRANCE": { id: "NODE_ARCHIVES_OF_REGRET_ENTRANCE", name: "Path to Regret's Archives", shortDesc: "A newly perceived path, heavy with unspoken sorrows.", position: {x: 90, y: 20}, storyletOnArrival: "STORY_ARCHIVES_ENTRANCE_MSG", connections: ["NODE_THRESHOLD_SANCTUM"]}
-};
+        // Storylet View
+        storyletTitle: null,
+        storyletText: null,
+        storyletChoices: null,
 
-const LOCATION_DATA_MINIMAL = {
-    "NODE_THRESHOLD_SANCTUM": { id: "NODE_THRESHOLD_SANCTUM", name: "The Threshold Sanctum", region: "The Precipice Edge", description: "A faintly glowing space, offering a moment of respite. The air hums with a quiet potential. The Keeper watches you, their form woven from shadow and starlight.", type: "Sanctuary", actions: ["rest", "shop_intro", "talk_keeper", "view_ambition"], storyletsOnExplore: ["STORY_KEEPER_ADVICE_OPTIONAL"] }
-};
+        // Encounter View
+        aspectNameEncounter: null,
+        aspectResolveEncounter: null,
+        aspectComposureEncounter: null,
+        aspectResonanceEncounter: null,
+        aspectDissonanceEncounter: null,
+        aspectIntentEncounter: null,
+        aspectTraitsEncounter: null,
+        playerFocusEncounter: null,
+        playerIntegrityEncounter: null,
+        playerComposureEncounter: null,
+        playerStanceEncounter: null,
+        playerHandCards: null,
+        endTurnEncounterButton: null,
+        revealTraitEncounterButton: null,
 
-const PRE_GAME_INTRO_LINES = [ "The edges fray.", "Cohesion... a forgotten luxury.", "Where <em>am</em> I?", "No... <em>what</em> am I becoming?", "Falling.", "Or... surfacing?" ];
+        // Context Panel
+        deckCountDisplay: null,
+        handCountDisplay: null, 
+        discardCountDisplay: null,
+        traumaCountDisplay: null,
+        viewDeckButton: null,
+        logEntries: null,
+        journalEntries: null,
+        addJournalEntryButton: null,
 
-const STORYLET_DATA_MINIMAL = {
-    "STORY_SHORE_ARRIVAL": { id: "STORY_SHORE_ARRIVAL", title: "Adrift at the Shore", text: "You claw your way onto something solid, though 'solid' feels like a generous term. Jagged, obsidian-like rock presses into you, cold and indifferent. The air is thick with the scent of ozone and something anciently sorrowful. Your thoughts are a fractured mess. A single, primal urge cuts through the fog: to simply *be* aware. What do you do?", choices: [ { text: "[Grasp for Awareness]", outcomeFunctionName: "outcomePlayGraspForAwarenessShore" } ] },
-    "STORY_WRECKAGE_ARRIVAL": { id: "STORY_WRECKAGE_ARRIVAL", title: "Splintered Logic", text: "This... this was something. A structure of reason? A carefully constructed argument? Now, just splintered concepts and the lingering heat of its collapse. A faint whisper catches your attention, '<em>...not meant to see...not for you...</em>'", choices: [ { text: "Sift through the debris carefully. (Costs 1 Focus)", outcomeFunctionName: "outcomeSiftWreckage", conditionFunctionName: "conditionHasFocus1" }, { text: "Focus on the whisper, try to understand.", outcomeFunctionName: "outcomeListenWhisperWreckage" }, { text: "Leave it be. This place feels dangerous.", outcomeFunctionName: "outcomeLeaveWreckage" } ] },
-    "STORY_NICHE_ARRIVAL": { id: "STORY_NICHE_ARRIVAL", title: "The Weeping Niche", text: "A narrow cleft in the rock, damp and cold. The sorrow here is a palpable presence, clinging to you like a shroud. The source of a faint, mournful sound is a single, tear-shaped fungus, pulsing with a faint, melancholy light. It seems to... respond to your proximity.", choices: [ { text: "Reach out to the fungus with empathy.", outcomeFunctionName: "outcomeTouchFungusEmpathy" }, { text: "Observe the fungus from a distance, analyze it.", outcomeFunctionName: "outcomeObserveFungusCognitive" }, { text: "Attempt to harvest the fungus.", outcomeFunctionName: "outcomeHarvestFungus" } ] },
-    "STORY_SANCTUARY_INTRO_AWAKENING": { id: "STORY_SANCTUARY_INTRO_AWAKENING", title: "The Keeper's Gaze", text: "The Keeper of the Threshold Sanctum regards you with ancient, luminous eyes. 'Another stray spark, washed up on the shores of the unthought. You are tattered, child of the surface, more echo than substance. But perhaps not entirely lost. This Threshold is but a small haven in the Inner Sea, the ocean of consciousness. What do you seek from this place, or from me?'", choices: [ { text: "\"Where am I? What is this place?\"", outcomeFunctionName: "outcomeKeeperExplainInnerSea" }, { text: "\"How do I leave? How do I get back to... before?\"", outcomeFunctionName: "outcomeKeeperExplainReturn" }, { text: "\"I feel... broken. Unmade.\"", outcomeFunctionName: "outcomeKeeperOfferRest", conditionFunctionName: "conditionPlayerNotAtMaxIntegrity"}, { text: "\"I need to understand these whispers... this sense of loss.\"", outcomeFunctionName: "outcomeKeeperAddressAmbition" } ] },
-    "STORY_KEEPER_ADVICE_OPTIONAL": { id: "STORY_KEEPER_ADVICE_OPTIONAL", title: "Further Counsel", text: "The Keeper inclines their head. 'You have more questions, or seek a different path now?'", choices: [ { text: "Ask about surviving the Inner Sea.", outcomeFunctionName: "outcomeKeeperSurvivalTips" }, { text: "Inquire about the nature of 'Concepts'.", outcomeFunctionName: "outcomeKeeperExplainConcepts" }, { text: "No more questions for now.", outcomeFunctionName: "outcomeEndConversationWithKeeper" } ] },
-    "STORY_ARCHIVES_ENTRANCE_MSG": {id: "STORY_ARCHIVES_ENTRANCE_MSG", title: "Path to Regret", text: "The air grows heavy here, thick with unspoken sorrows and the dust of forgotten moments. This path seems to lead towards the Archives the Keeper mentioned.", choices: [{text: "Proceed with caution.", outcomeFunctionName: "outcomeEndConversationWithKeeper"}]} // Placeholder
-};
+        // Footer
+        gameMenuButton: null,
 
-const PERSONA_STANCE_DEFINITIONS = {
-    "OBSERVER": { id: "OBSERVER", name: "Observer Stance", description: "A balanced, cautious stance. +1 Focus regeneration at the start of your turn in encounters.", modifiers: { focusRegenBonus: 1 } }
-};
+        // Modals
+        modalOverlay: null,
+        modalDeckView: null,
+        fullDeckList: null,
+        modalGameOver: null,
+        gameOverTitle: null,
+        gameOverText: null,
+        restartGameButton: null,
 
-// No executable code or init() functions in config.js
-// console.log("Config.js loaded and parsed."); // Can be useful for debugging load order
+        // Tooltip
+        tooltip: null,
+    };
+
+    let preGameIntroLineIndex = 0;
+    let preGameIntroTimeout = null;
+
+    // --- Initialization ---
+    function init() {
+        // Cache all DOM elements (ensure IDs match index.html v2)
+        DOM.psychonautNameDisplay = document.querySelector('#psychonaut-name-display .value');
+        DOM.currentAmbitionDisplay = document.querySelector('#current-ambition-display .value');
+        DOM.playerIntegrityBar = document.getElementById('player-integrity-bar');
+        DOM.playerIntegrityValue = document.getElementById('player-integrity-value');
+        DOM.playerFocusBar = document.getElementById('player-focus-bar');
+        DOM.playerFocusValue = document.getElementById('player-focus-value');
+        DOM.playerClarityBar = document.getElementById('player-clarity-bar');
+        DOM.playerClarityValue = document.getElementById('player-clarity-value');
+        DOM.playerHopeBar = document.getElementById('player-hope-bar');
+        DOM.playerHopeValue = document.getElementById('player-hope-value');
+        DOM.playerDespairBar = document.getElementById('player-despair-bar');
+        DOM.playerDespairValue = document.getElementById('player-despair-value');
+        // ATTUNEMENT_DEFINITIONS must be loaded (from config.js) before UIManager.init() is called
+        if (typeof ATTUNEMENT_DEFINITIONS !== 'undefined') {
+            for (const key in ATTUNEMENT_DEFINITIONS) { 
+                DOM.attunementsListItems[key] = document.getElementById(`attunement-${key.charAt(0).toLowerCase()}`);
+            }
+        } else {
+            console.error("UIManager.init: ATTUNEMENT_DEFINITIONS not available. Ensure config.js is loaded first.");
+        }
+        DOM.activeMemoriesList = document.getElementById('active-memories-list');
+        DOM.preGameIntroView = document.getElementById('pre-game-intro-view');
+        DOM.preGameTitle = document.getElementById('pre-game-title');
+        DOM.preGameTextArea = document.getElementById('pre-game-text-area');
+        DOM.continueFromPrecipiceButton = document.getElementById('continue-from-precipice');
+        DOM.mapView = document.getElementById('map-view');
+        DOM.locationView = document.getElementById('location-view');
+        DOM.storyletView = document.getElementById('storylet-view');
+        DOM.encounterView = document.getElementById('encounter-view');
+        DOM.nodeMapContainer = document.getElementById('node-map-container');
+        DOM.currentNodeMapName = document.getElementById('current-node-map-name');
+        DOM.mapNodeInfo = document.getElementById('map-node-info');
+        DOM.currentNodeNameDisplay = document.getElementById('current-node-name-display');
+        DOM.currentNodeDescriptionDisplay = document.getElementById('current-node-description-display');
+        DOM.exploreCurrentNodeButton = document.getElementById('explore-current-node-button');
+        DOM.locationName = document.getElementById('location-name');
+        DOM.locationDescription = document.getElementById('location-description');
+        DOM.locationActions = document.getElementById('location-actions');
+        DOM.returnToMapFromLocationButton = document.getElementById('return-to-map-from-location');
+        DOM.storyletTitle = document.getElementById('storylet-title');
+        DOM.storyletText = document.getElementById('storylet-text');
+        DOM.storyletChoices = document.getElementById('storylet-choices');
+        DOM.aspectNameEncounter = document.getElementById('aspect-name-encounter');
+        DOM.aspectResolveEncounter = document.getElementById('aspect-resolve-encounter');
+        DOM.aspectComposureEncounter = document.getElementById('aspect-composure-encounter');
+        DOM.aspectResonanceEncounter = document.getElementById('aspect-resonance-encounter');
+        DOM.aspectDissonanceEncounter = document.getElementById('aspect-dissonance-encounter');
+        DOM.aspectIntentEncounter = document.getElementById('aspect-intent-encounter');
+        DOM.aspectTraitsEncounter = document.getElementById('aspect-traits-encounter');
+        DOM.playerFocusEncounter = document.getElementById('player-focus-encounter');
+        DOM.playerIntegrityEncounter = document.getElementById('player-integrity-encounter');
+        DOM.playerComposureEncounter = document.getElementById('player-composure-encounter');
+        DOM.playerStanceEncounter = document.getElementById('player-stance-encounter');
+        DOM.playerHandCards = document.getElementById('player-hand-cards');
+        DOM.endTurnEncounterButton = document.getElementById('end-turn-encounter');
+        DOM.revealTraitEncounterButton = document.getElementById('reveal-trait-encounter');
+        DOM.deckCountDisplay = document.getElementById('deck-count-display');
+        DOM.handCountDisplay = document.getElementById('hand-count-display'); 
+        DOM.discardCountDisplay = document.getElementById('discard-count-display');
+        DOM.traumaCountDisplay = document.getElementById('trauma-count-display');
+        DOM.viewDeckButton = document.getElementById('view-deck-button');
+        DOM.logEntries = document.getElementById('log-entries');
+        DOM.journalEntries = document.getElementById('journal-entries');
+        DOM.addJournalEntryButton = document.getElementById('add-journal-entry-button');
+        DOM.gameMenuButton = document.getElementById('game-menu-button');
+        DOM.modalOverlay = document.getElementById('modal-overlay');
+        DOM.modalDeckView = document.getElementById('modal-deck-view');
+        DOM.fullDeckList = document.getElementById('full-deck-list');
+        DOM.modalGameOver = document.getElementById('modal-game-over');
+        DOM.gameOverTitle = document.getElementById('game-over-title');
+        DOM.gameOverText = document.getElementById('game-over-text');
+        DOM.restartGameButton = document.getElementById('restart-game-button');
+        DOM.tooltip = document.getElementById('tooltip');
+        console.log("UIManager (v2 Awakening - Corrected) initialized and DOM elements cached.");
+    }
+
+    function _updateBar(barElement, value, maxValue) { if (barElement && typeof value === 'number' && typeof maxValue === 'number' && maxValue >= 0) { const percentage = maxValue === 0 ? 0 : Math.max(0, Math.min(100, (value / maxValue) * 100)); barElement.style.width = percentage + '%'; } else if (barElement) { barElement.style.width = '0%'; } }
+    function _setText(element, text) { if (element) element.textContent = text; }
+    function _setHTML(element, html) { if (element) element.innerHTML = html; }
+
+    // This function *only* manipulates DOM class lists for visibility.
+    // The game's conceptual currentViewId is managed by main.js.
+    function _showViewActualDOM(viewToShowId) {
+        const views = [ DOM.preGameIntroView, DOM.mapView, DOM.locationView, DOM.storyletView, DOM.encounterView ];
+        views.forEach(view => {
+            if (view) { // Ensure element exists before trying to access classList
+                if (view.id === viewToShowId) {
+                    view.classList.remove('view-hidden'); view.classList.add('view-active');
+                } else {
+                    view.classList.remove('view-active'); view.classList.add('view-hidden');
+                }
+            } else {
+                // console.warn(`UIManager: DOM element for a view ID was not found during _showViewActualDOM. Check init cache for ${viewToShowId} or other views.`);
+            }
+        });
+    }
+
+    function startPreGameIntro() { 
+        _showViewActualDOM('pre-game-intro-view'); // UIManager makes its view visible
+        preGameIntroLineIndex = 0; 
+        if (DOM.preGameTextArea) DOM.preGameTextArea.innerHTML = ''; 
+        if (DOM.continueFromPrecipiceButton) DOM.continueFromPrecipiceButton.classList.add('view-hidden'); 
+        _displayNextPreGameLine(); 
+    }
+    function _displayNextPreGameLine() { 
+        if (typeof PRE_GAME_INTRO_LINES !== 'undefined' && preGameIntroLineIndex < PRE_GAME_INTRO_LINES.length) { 
+            const p = document.createElement('p'); 
+            p.classList.add('intro-line'); 
+            p.style.animationDelay = `${preGameIntroLineIndex * 0.25}s`; 
+            p.innerHTML = PRE_GAME_INTRO_LINES[preGameIntroLineIndex]; 
+            if (DOM.preGameTextArea) DOM.preGameTextArea.appendChild(p); 
+            preGameIntroLineIndex++; 
+            preGameIntroTimeout = setTimeout(_displayNextPreGameLine, CONFIG.PRE_GAME_INTRO_LINE_DELAY); 
+        } else { 
+            if (DOM.continueFromPrecipiceButton) { 
+                DOM.continueFromPrecipiceButton.classList.remove('view-hidden'); 
+            } 
+        } 
+    }
+    function clearPreGameIntroTimeout() { if (preGameIntroTimeout) clearTimeout(preGameIntroTimeout); preGameIntroTimeout = null; }
+
+    function updatePlayerStats(playerData) { if (!playerData) return; _setText(DOM.playerIntegrityValue, `${playerData.integrity}/${playerData.maxIntegrity}`); _updateBar(DOM.playerIntegrityBar, playerData.integrity, playerData.maxIntegrity); _setText(DOM.playerFocusValue, `${playerData.focus}/${playerData.maxFocus}`); _updateBar(DOM.playerFocusBar, playerData.focus, playerData.maxFocus); _setText(DOM.playerClarityValue, `${playerData.clarity}/${playerData.maxClarity}`); _updateBar(DOM.playerClarityBar, playerData.clarity, playerData.maxClarity); _setText(DOM.playerHopeValue, `${playerData.hope}/${playerData.maxHope}`); _updateBar(DOM.playerHopeBar, playerData.hope, playerData.maxHope); _setText(DOM.playerDespairValue, `${playerData.despair}/${playerData.maxDespair}`); _updateBar(DOM.playerDespairBar, playerData.despair, playerData.maxDespair); if (playerData.attunements && typeof ATTUNEMENT_DEFINITIONS !== 'undefined') { for (const key in playerData.attunements) { if (DOM.attunementsListItems[key]) { _setText(DOM.attunementsListItems[key], playerData.attunements[key]); } } } }
+    function updateActiveMemories(memoriesArray) { if (!DOM.activeMemoriesList) return; DOM.activeMemoriesList.innerHTML = ''; if (memoriesArray && memoriesArray.length > 0) { memoriesArray.forEach(memory => { const li = document.createElement('li'); li.textContent = memory.name || memory; DOM.activeMemoriesList.appendChild(li); }); } else { _setHTML(DOM.activeMemoriesList, `<li><span class="placeholder">No memories stir...</span></li>`); } }
+
+    function renderNodeMap(allNodesData, currentNodeId, accessibleNodeIds = []) { if (!DOM.nodeMapContainer) return; DOM.nodeMapContainer.innerHTML = ''; for (const nodeId in allNodesData) { const nodeData = allNodesData[nodeId]; const nodeEl = document.createElement('div'); nodeEl.classList.add('map-node'); nodeEl.dataset.nodeId = nodeId; nodeEl.style.left = `calc(${nodeData.position.x}% - 60px)`; nodeEl.style.top = `calc(${nodeData.position.y}% - 35px)`; nodeEl.innerHTML = `<span class="map-node-name">${nodeData.name}</span><span class="map-node-type">${nodeData.type || nodeData.shortDesc || ""}</span>`; if (nodeId === currentNodeId) nodeEl.classList.add('current'); if (accessibleNodeIds.includes(nodeId) && nodeId !== currentNodeId) { nodeEl.classList.add('accessible'); } else if (nodeId !== currentNodeId) { nodeEl.classList.add('inaccessible'); } DOM.nodeMapContainer.appendChild(nodeEl); } /* TODO: Line drawing */ }
+    function updateCurrentNodeInfo(nodeData) { if (!nodeData) { _setText(DOM.currentNodeMapName, "The Uncharted Void"); _setText(DOM.currentNodeNameDisplay, "Lost"); _setHTML(DOM.currentNodeDescriptionDisplay, "Your senses fail to grasp this place."); return; } _setText(DOM.currentNodeMapName, nodeData.name); _setText(DOM.currentNodeNameDisplay, nodeData.name); _setHTML(DOM.currentNodeDescriptionDisplay, nodeData.shortDesc || nodeData.description || "An unknown space."); }
+
+    // These functions now *only populate* their respective views.
+    // The actual switching of which view is active (visible) is handled by Game._switchToView -> UIManager._showViewActualDOM
+    function displayLocation(locationData) { 
+        if (!locationData) return; 
+        // View should already be 'location-view' by Game module
+        _setText(DOM.locationName, locationData.name); 
+        _setHTML(DOM.locationDescription, `<p>${locationData.description || "..."}</p>`); 
+        if (DOM.locationActions) { 
+            DOM.locationActions.innerHTML = '<h3>Actions:</h3>'; // Clear previous
+            if (locationData.actions && locationData.actions.length > 0) { 
+                locationData.actions.forEach(actionId => { 
+                    const button = document.createElement('button'); 
+                    button.dataset.action = actionId; 
+                    button.textContent = actionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); 
+                    DOM.locationActions.appendChild(button); 
+                }); 
+            }
+            // Ensure static "Return to Nav" button is visible if it's part of this view's static HTML
+            if(DOM.returnToMapFromLocationButton) DOM.returnToMapFromLocationButton.classList.remove('view-hidden');
+        } 
+    }
+    function displayStorylet(storyletInstanceData) { 
+        if (!storyletInstanceData) return; 
+        // View should already be 'storylet-view'
+        _setText(DOM.storyletTitle, storyletInstanceData.title); 
+        _setHTML(DOM.storyletText, `<p>${(storyletInstanceData.text || "").replace(/\n/g, '</p><p>')}</p>`); 
+        if (DOM.storyletChoices) { 
+            DOM.storyletChoices.innerHTML = '<h3>Choices:</h3>'; 
+            if (storyletInstanceData.choices && storyletInstanceData.choices.length > 0) { 
+                storyletInstanceData.choices.forEach((choice, index) => { 
+                    const button = document.createElement('button'); 
+                    button.dataset.choiceIndex = index; 
+                    button.textContent = choice.text; 
+                    if (choice.disabled) { 
+                        button.disabled = true; 
+                        button.title = choice.disabledReason || "This choice is currently unavailable."; 
+                    } 
+                    DOM.storyletChoices.appendChild(button); 
+                }); 
+            } else { _setHTML(DOM.storyletChoices, `<p class="placeholder">No choices present themselves.</p>`); } 
+        } 
+    }
+    function displayEncounterView(aspectData, playerData, playerEncounterState) { 
+        if (!aspectData || !playerData || !playerEncounterState) return; 
+        // View should already be 'encounter-view'
+        _setText(DOM.aspectNameEncounter, aspectData.name); _setText(DOM.aspectResolveEncounter, `${aspectData.resolve}/${aspectData.maxResolve}`); _setText(DOM.aspectComposureEncounter, aspectData.composure); _setText(DOM.aspectResonanceEncounter, `${aspectData.resonance}/${aspectData.resonanceGoal}`); _setText(DOM.aspectDissonanceEncounter, `${aspectData.dissonance}/${aspectData.dissonanceThreshold}`); _setText(DOM.aspectIntentEncounter, aspectData.currentIntent ? aspectData.currentIntent.description : "Contemplating..."); if (DOM.aspectTraitsEncounter) { DOM.aspectTraitsEncounter.innerHTML = ''; (aspectData.visibleTraits || []).forEach(trait => _addTraitLiToEncounterUI(trait.name, trait.description)); (aspectData.hiddenTraits || []).forEach(trait => { if (aspectData.revealedTraits && aspectData.revealedTraits.includes(trait.name)) { _addTraitLiToEncounterUI(trait.name, trait.description, true); } }); } function _addTraitLiToEncounterUI(name, description, isRevealed = false) { const li = document.createElement('li'); li.innerHTML = `${isRevealed ? '<em>(Revealed)</em> ' : ''}<strong>${name}:</strong> ${description}`; DOM.aspectTraitsEncounter.appendChild(li); } _setText(DOM.playerFocusEncounter, `${playerData.focus}/${playerData.maxFocus}`); _setText(DOM.playerIntegrityEncounter, `${playerData.integrity}/${playerData.maxIntegrity}`); _setText(DOM.playerComposureEncounter, playerEncounterState.composure); _setText(DOM.playerStanceEncounter, playerData.activePersonaStance ? playerData.activePersonaStance.name : "None"); 
+    }
+    function updatePlayerHand(handCardDefinitions) { if (!DOM.playerHandCards) return; DOM.playerHandCards.innerHTML = ''; if (handCardDefinitions && handCardDefinitions.length > 0) { handCardDefinitions.forEach(cardDef => { const cardEl = document.createElement('div'); cardEl.classList.add('encounter-card-placeholder'); cardEl.dataset.cardId = cardDef.id; cardEl.innerHTML = ` <div class="card-name-encounter">${cardDef.name} <span class="card-cost-encounter">${cardDef.cost}F</span></div> <div class="card-type-encounter">${cardDef.type} - ${cardDef.attunement}</div> <div class="card-desc-encounter">${(cardDef.description || "").replace(/\n/g, "<br>")}</div> <div class="card-keywords-encounter">${(cardDef.keywords || []).join(', ')}</div> `; DOM.playerHandCards.appendChild(cardEl); }); } else { _setHTML(DOM.playerHandCards, `<span class="placeholder">No concepts in hand.</span>`); } }
+
+    function updateDeckInfo(deckCount, handCount, discardCount, traumaCount) { _setText(DOM.deckCountDisplay, deckCount); _setText(DOM.handCountDisplay, handCount); _setText(DOM.discardCountDisplay, discardCount); _setText(DOM.traumaCountDisplay, traumaCount); }
+    function addLogEntry(message, type = "normal") { if (!DOM.logEntries) return; const p = document.createElement('p'); p.classList.add('log-entry'); if (type) p.classList.add(type); p.innerHTML = message; DOM.logEntries.appendChild(p); DOM.logEntries.scrollTop = DOM.logEntries.scrollHeight; if (DOM.logEntries.children.length > (CONFIG.LOG_MAX_ENTRIES || 50)) { DOM.logEntries.removeChild(DOM.logEntries.firstChild); } }
+    function addJournalEntry(title, text) { if (!DOM.journalEntries) return; if (DOM.journalEntries.querySelector('.placeholder')) { DOM.journalEntries.innerHTML = ''; } const entryDiv = document.createElement('div'); entryDiv.classList.add('journal-entry'); entryDiv.innerHTML = `<span class="entry-title">${title}:</span> ${text.replace(/\n/g, '<br>')}`; DOM.journalEntries.appendChild(entryDiv); DOM.journalEntries.scrollTop = DOM.journalEntries.scrollHeight; if (DOM.journalEntries.children.length > (CONFIG.JOURNAL_MAX_ENTRIES || 20)) { DOM.journalEntries.removeChild(DOM.journalEntries.firstChild); } }
+
+    function showModal(modalContentElementId) { if (DOM.modalOverlay) { const allModals = DOM.modalOverlay.querySelectorAll('.modal-content'); allModals.forEach(mod => mod.classList.add('view-hidden')); const targetModal = document.getElementById(modalContentElementId); if (targetModal) { targetModal.classList.remove('view-hidden'); DOM.modalOverlay.classList.remove('view-hidden'); } else { console.error("Modal content not found:", modalContentElementId); } } }
+    function hideModals() { if (DOM.modalOverlay) { DOM.modalOverlay.classList.add('view-hidden'); const allModals = DOM.modalOverlay.querySelectorAll('.modal-content'); allModals.forEach(mod => mod.classList.add('view-hidden')); } }
+    function displayFullDeck(deckCardDefinitions) { if (!DOM.fullDeckList) return; DOM.fullDeckList.innerHTML = ''; if (deckCardDefinitions && deckCardDefinitions.length > 0) { deckCardDefinitions.forEach(cardDef => { const li = document.createElement('li'); li.innerHTML = `<strong>${cardDef.name}</strong> (Cost: ${cardDef.cost}F) <br><small><em>${cardDef.type} - ${cardDef.attunement}</em></small><br><small>${(cardDef.description || "").replace(/\n/g,"<br>")}</small>`; DOM.fullDeckList.appendChild(li); }); } else { _setHTML(DOM.fullDeckList, `<li>Your deck is empty.</li>`); } showModal('modal-deck-view'); }
+    function displayGameOver(title, message) { _setText(DOM.gameOverTitle, title); _setText(DOM.gameOverText, message); showModal('modal-game-over'); }
+
+    function showTooltip(content, event) { if (!DOM.tooltip) return; DOM.tooltip.innerHTML = content; DOM.tooltip.classList.remove('view-hidden'); moveTooltip(event); }
+    function hideTooltip() { if (DOM.tooltip) DOM.tooltip.classList.add('view-hidden'); }
+    function moveTooltip(event) { if (!DOM.tooltip || DOM.tooltip.classList.contains('view-hidden')) return; let x = event.clientX + 15; let y = event.clientY + 15; const tooltipRect = DOM.tooltip.getBoundingClientRect(); if (x + tooltipRect.width > window.innerWidth) x = event.clientX - tooltipRect.width - 15; if (y + tooltipRect.height > window.innerHeight) y = event.clientY - tooltipRect.height - 15; DOM.tooltip.style.left = `${x}px`; DOM.tooltip.style.top = `${y}px`; }
+
+    return {
+        init,
+        startPreGameIntro, clearPreGameIntroTimeout,
+        updatePlayerStats, updateActiveMemories,
+        _showViewActualDOM, // Expose for Game module to call after setting Game.currentViewId
+        renderNodeMap, updateCurrentNodeInfo,
+        displayLocation, displayStorylet, // These now only populate their respective views
+        displayEncounterView, updatePlayerHand,
+        updateDeckInfo, 
+        addLogEntry, addJournalEntry,
+        showModal, hideModals, displayFullDeck, displayGameOver,
+        showTooltip, hideTooltip, moveTooltip,
+        getDOMElement: (elementName) => DOM[elementName]
+    };
+})();

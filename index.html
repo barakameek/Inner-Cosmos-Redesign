@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sunless Psyche: The Labyrinth Within (Node Map Prototype)</title>
+    <title>Sunless Psyche: The Awakening (v2)</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,8 +12,8 @@
         <!-- Header / Meta Information Area -->
         <header id="game-header">
             <h1>Sunless Psyche</h1>
-            <div id="psychonaut-name-display">Psychonaut: <span class="value">The Awakened</span></div>
-            <div id="current-ambition-display">Ambition: <span class="value">To Grasp What Was Lost</span></div>
+            <div id="psychonaut-name-display">Psychonaut: <span class="value">The Unknowing</span></div>
+            <div id="current-ambition-display">Ambition: <span class="value">To Simply Be</span></div>
         </header>
 
         <!-- Main Game Area -->
@@ -27,35 +27,35 @@
                     <div class="bar-container">
                         <div id="player-integrity-bar" class="bar integrity"></div>
                     </div>
-                    <span id="player-integrity-value" class="value">10/100</span> <!-- Updated for intro -->
+                    <span id="player-integrity-value" class="value">10/10</span>
                 </div>
                 <div class="stat-block">
                     <label>Focus:</label>
                     <div class="bar-container">
                         <div id="player-focus-bar" class="bar focus"></div>
                     </div>
-                    <span id="player-focus-value" class="value">1/5</span> <!-- Updated for intro -->
+                    <span id="player-focus-value" class="value">1/1</span>
                 </div>
                 <div class="stat-block">
                     <label>Clarity:</label>
                     <div class="bar-container">
                         <div id="player-clarity-bar" class="bar clarity"></div>
                     </div>
-                    <span id="player-clarity-value" class="value">1/20</span> <!-- Updated for intro -->
+                    <span id="player-clarity-value" class="value">1/20</span>
                 </div>
                 <div class="stat-block">
                     <label>Hope:</label>
                     <div class="bar-container">
                         <div id="player-hope-bar" class="bar hope"></div>
                     </div>
-                    <span id="player-hope-value" class="value">0/10</span> <!-- Updated for intro -->
+                    <span id="player-hope-value" class="value">0/10</span>
                 </div>
                 <div class="stat-block">
                     <label>Despair:</label>
                     <div class="bar-container">
                         <div id="player-despair-bar" class="bar despair"></div>
                     </div>
-                    <span id="player-despair-value" class="value">7/10</span> <!-- Updated for intro -->
+                    <span id="player-despair-value" class="value">7/10</span>
                 </div>
 
                 <div id="attunements-display">
@@ -81,21 +81,17 @@
 
             <!-- Center Panel: World Map / Location / Storylet / Encounter -->
             <section id="world-interaction-panel">
-                <!-- PRE-GAME INTRO SCREEN -->
-                <div id="pre-game-intro-view" class="view-active"> <!-- Start with this view active -->
+                <div id="pre-game-intro-view" class="view-active">
                     <h2 id="pre-game-title">The Precipice</h2>
                     <div id="pre-game-text-area">
-                        <p class="intro-line">The edges fray.</p>
-                        <!-- More lines will be added by JS -->
+                        <!-- Intro lines will be populated by JS -->
                     </div>
                     <button id="continue-from-precipice" class="view-hidden">Grasp for Awareness...</button>
                 </div>
 
-
-                <div id="map-view" class="view-hidden"> <!-- Was view-active, now hidden initially -->
+                <div id="map-view" class="view-hidden">
                     <h2>The Inner Sea - <span id="current-node-map-name" class="value">The Shattered Shore</span></h2>
                     <div id="node-map-container">
-                        <!-- Node-based map will be rendered here by JS -->
                         <p class="placeholder">Visualizing connections...</p>
                     </div>
                     <div id="map-node-info">
@@ -105,8 +101,6 @@
                     </div>
                 </div>
 
-                <!-- Location View is less prominent with node map, exploration triggers storylets/encounters directly -->
-                <!-- It might be used for Sanctuaries or complex "ports" -->
                 <div id="location-view" class="view-hidden">
                     <h2 id="location-name">Location Name</h2>
                     <div id="location-description">
@@ -114,8 +108,7 @@
                     </div>
                     <div id="location-actions">
                         <h3>Actions:</h3>
-                        <button data-action="rest">Rest</button>
-                        <button data-action="shop">Emporium</button>
+                        <!-- Populated by JS -->
                         <button id="return-to-map-from-location">Return to Navigation</button>
                     </div>
                 </div>
@@ -127,8 +120,7 @@
                     </div>
                     <div id="storylet-choices">
                         <h3>Choices:</h3>
-                        <button data-choice-index="0">Choice 1</button>
-                        <button data-choice-index="1">Choice 2</button>
+                        <!-- Populated by JS -->
                     </div>
                 </div>
 
@@ -163,7 +155,6 @@
                         <button id="reveal-trait-encounter" title="Spend 1 Insight to reveal a hidden Trait">Reveal Trait (1 Insight)</button>
                     </div>
                 </div>
-
             </section>
 
             <!-- Right Panel: Deck Info / Log / Journal -->
@@ -171,6 +162,7 @@
                 <div id="deck-info-display">
                     <h3>Deck of Concepts</h3>
                     <p>In Deck: <span id="deck-count-display" class="value">0</span></p>
+                    <p>In Hand: <span id="hand-count-display" class="value">0</span></p> <!-- Added hand count -->
                     <p>In Discard: <span id="discard-count-display" class="value">0</span></p>
                     <p>Traumas: <span id="trauma-count-display" class="value">0</span></p>
                     <button id="view-deck-button">View Full Deck</button>
@@ -194,13 +186,11 @@
 
         </main>
 
-        <!-- Footer / Meta Controls -->
         <footer id="game-footer">
             <button id="game-menu-button">Game Menu</button>
-            <span id="game-version">Sunless Psyche v0.1.0 (Awakening Prototype)</span>
+            <span id="game-version">Sunless Psyche v0.1.0 (Awakening v2)</span>
         </footer>
 
-        <!-- Modals / Pop-ups (Initially Hidden) -->
         <div id="modal-overlay" class="view-hidden">
             <div id="modal-deck-view" class="modal-content view-hidden">
                 <h2>Your Deck of Concepts</h2>
@@ -213,21 +203,17 @@
                 <p id="game-over-text">Your journey into the Inner Sea has ended...</p>
                 <button id="restart-game-button">Begin Anew</button>
             </div>
-            <!-- Other modals for settings, save/load prompts, etc. -->
         </div>
 
-        <!-- Tooltip Element -->
         <div id="tooltip" class="view-hidden"></div>
 
     </div> <!-- End #game-wrapper -->
 
-    <!-- JavaScript Files -->
     <script src="js/config.js"></script>
     <script src="js/ui_manager.js"></script>
     <script src="js/player.js"></script>
     <script src="js/world.js"></script>
     <script src="js/storylet_manager.js"></script>
-    <!-- concept_cards.js could be merged into config or encounter_manager for effects -->
     <script src="js/encounter_manager.js"></script>
     <script src="js/main.js"></script>
 

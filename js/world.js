@@ -18,7 +18,7 @@ const World = (() => { // IIFE for a module-like structure
                 UIManager.addLogEntry("FATAL ERROR: The Inner Sea's geography is undefined!", "critical_system");
             }
         } else {
-            console.log("World (v2 Awakening - Full) initialized with node map data. Player position to be set by Game sequence.");
+            console.log("World (v2 Awakening - Full Corrected): Initialized. Player position to be set by Game sequence.");
         }
     }
 
@@ -29,11 +29,13 @@ const World = (() => { // IIFE for a module-like structure
                 if (NODE_MAP_DATA.hasOwnProperty(nodeId)) {
                     allNodes[nodeId] = { ...NODE_MAP_DATA[nodeId] };
                     allNodes[nodeId].connections = Array.isArray(allNodes[nodeId].connections) ? [...allNodes[nodeId].connections] : [];
+                    allNodes[nodeId].arrivalStoryletCompleted = false; // Initialize flag
                     if (LOCATION_DATA_MINIMAL && LOCATION_DATA_MINIMAL[nodeId]) { 
                         allNodes[nodeId].locationDetails = { ...LOCATION_DATA_MINIMAL[nodeId] };
                     }
                 }
             }
+            // Ensure all connected nodes exist in allNodes, creating placeholders if not fully defined
             for (const nodeId in allNodes) {
                 const node = allNodes[nodeId];
                 if(node.connections && Array.isArray(node.connections)) { 
@@ -47,7 +49,8 @@ const World = (() => { // IIFE for a module-like structure
                                 position: { x: Math.random() * 80 + 10, y: Math.random() * 80 + 10 }, 
                                 storyletOnArrival: null,
                                 connections: [],
-                                type: "Unknown"
+                                type: "Unknown",
+                                arrivalStoryletCompleted: false 
                             };
                         }
                     });
@@ -86,8 +89,8 @@ const World = (() => { // IIFE for a module-like structure
     }
 
     function navigateToNode(targetNodeId, player) {
-        if (!player) { console.error("Player object not provided for navigation cost in World.navigateToNode."); if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry("Error: Player context missing for navigation.", "error"); return false; }
-        if (!allNodes[targetNodeId]) { if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Target node "${targetNodeId}" does not exist.`, "error"); return false; }
+        if (!player) { console.error("Player object not provided for navigation cost in World.navigateToNode."); if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry("Error: Player context missing for navigation.", "error"); return false; }
+        if (!allNodes[targetNodeId]) { if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Target node "${targetNodeId}" does not exist.`, "error"); return false; }
 
         if (canNavigateToNode(targetNodeId)) {
             const navigationCost = 1; 
@@ -96,14 +99,14 @@ const World = (() => { // IIFE for a module-like structure
                 const previousNodeName = allNodes[currentPsychonautNodeId].name;
                 currentPsychonautNodeId = targetNodeId;
                 const newNodeName = allNodes[currentPsychonautNodeId].name;
-                if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry(`Journeyed from ${previousNodeName} to ${newNodeName}.`, "system");
+                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Journeyed from ${previousNodeName} to ${newNodeName}.`, "system");
                 return allNodes[currentPsychonautNodeId];
             } else {
-                if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry(`Not enough Clarity to travel to ${allNodes[targetNodeId].name}. (Requires ${navigationCost}, Have: ${player.clarity})`, "warning");
+                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Not enough Clarity to travel to ${allNodes[targetNodeId].name}. (Requires ${navigationCost}, Have: ${player.clarity})`, "warning");
                 return false;
             }
         } else {
-            if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry(`No direct path to ${allNodes[targetNodeId].name} from ${allNodes[currentPsychonautNodeId]?.name || 'your current position'}.`, "warning");
+            if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`No direct path to ${allNodes[targetNodeId].name} from ${allNodes[currentPsychonautNodeId]?.name || 'your current position'}.`, "warning");
             return false;
         }
     }
@@ -117,18 +120,46 @@ const World = (() => { // IIFE for a module-like structure
         if (allNodes[fromNodeId] && allNodes[toNodeId]) {
             if (!allNodes[fromNodeId].connections.includes(toNodeId)) {
                 allNodes[fromNodeId].connections.push(toNodeId);
-                if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry(`A new path has opened from ${allNodes[fromNodeId].name} towards ${allNodes[toNodeId].name}.`, "discovery");
+                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`A new path has opened from ${allNodes[fromNodeId].name} towards ${allNodes[toNodeId].name}.`, "discovery");
                 return true;
             }
         } else {
             console.error(`Cannot reveal connection: Node ${fromNodeId} or ${toNodeId} not found.`);
-            if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Could not map path between unknown echoes (${fromNodeId} to ${toNodeId}).`, "error");
+            if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Could not map path between unknown echoes (${fromNodeId} to ${toNodeId}).`, "error");
         }
         return false;
     }
 
-    function lockNodeConnection(fromNodeId, toNodeId) { if (allNodes[fromNodeId] && allNodes[toNodeId] && allNodes[fromNodeId].connections) { const index = allNodes[fromNodeId].connections.indexOf(toNodeId); if (index > -1) { allNodes[fromNodeId].connections.splice(index, 1); allNodes[fromNodeId].lockedConnections = allNodes[fromNodeId].lockedConnections || []; if (!allNodes[fromNodeId].lockedConnections.includes(toNodeId)) { allNodes[fromNodeId].lockedConnections.push(toNodeId); } if(UIManager && UIManager.addLogEntry) UIManager.addLogEntry(`The path from ${allNodes[fromNodeId].name} to ${allNodes[toNodeId].name} has become impassable.`, "world_event_negative"); return true; } } return false; }
-    function updateNodeShortDescription(nodeId, newShortDesc) { if (allNodes[nodeId]) { allNodes[nodeId].shortDesc = newShortDesc; } }
+    function lockNodeConnection(fromNodeId, toNodeId) { 
+        if (allNodes[fromNodeId] && allNodes[toNodeId] && allNodes[fromNodeId].connections) { 
+            const index = allNodes[fromNodeId].connections.indexOf(toNodeId); 
+            if (index > -1) { 
+                allNodes[fromNodeId].connections.splice(index, 1); 
+                allNodes[fromNodeId].lockedConnections = allNodes[fromNodeId].lockedConnections || []; 
+                if (!allNodes[fromNodeId].lockedConnections.includes(toNodeId)) { 
+                    allNodes[fromNodeId].lockedConnections.push(toNodeId); 
+                } 
+                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`The path from ${allNodes[fromNodeId].name} to ${allNodes[toNodeId].name} has become impassable.`, "world_event_negative"); 
+                return true; 
+            } 
+        } 
+        return false; 
+    }
+    
+    function updateNodeShortDescription(nodeId, newShortDesc) { 
+        if (allNodes[nodeId]) { 
+            allNodes[nodeId].shortDesc = newShortDesc; 
+        } 
+    }
+    
+    function markArrivalStoryletCompleted(nodeId) {
+        if (allNodes[nodeId]) {
+            allNodes[nodeId].arrivalStoryletCompleted = true;
+            console.log(`Arrival storylet for node ${nodeId} ('${allNodes[nodeId].name}') marked as completed.`);
+        } else {
+            console.warn(`Attempted to mark arrival storylet completed for non-existent node: ${nodeId}`);
+        }
+    }
 
     function resetWorld() {
         init(); 
@@ -146,6 +177,7 @@ const World = (() => { // IIFE for a module-like structure
         revealNodeConnection,
         lockNodeConnection,
         updateNodeShortDescription,
+        markArrivalStoryletCompleted, 
         resetWorld
     };
 })();

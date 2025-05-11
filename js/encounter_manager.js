@@ -1,6 +1,6 @@
 // js/encounter_manager.js
 
-const EncounterManager = (() => { // CORRECTED: This should declare EncounterManager
+const EncounterManager = (() => {
 
     let isActive = false;
     let currentPlayerRef = null;
@@ -15,12 +15,11 @@ const EncounterManager = (() => { // CORRECTED: This should declare EncounterMan
 
     function init(player) {
         currentPlayerRef = player;
-        console.log("EncounterManager (v2 Awakening - Corrected) initialized.");
+        console.log("EncounterManager (v2 Awakening - Full) initialized.");
     }
 
     function startEncounter(aspectId, previousViewId = 'map-view') {
-        // Assumes ASPECT_TEMPLATES is globally available from config.js
-        const aspectTemplate = ASPECT_TEMPLATES[aspectId];
+        const aspectTemplate = ASPECT_TEMPLATES[aspectId]; // Assumes ASPECT_TEMPLATES is global
         if (!aspectTemplate) {
             if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Aspect template ID "${aspectId}" not found.`, "error");
             if(typeof Game !== 'undefined' && Game.returnFromEncounter) Game.returnFromEncounter(previousViewId); 
@@ -63,11 +62,112 @@ const EncounterManager = (() => { // CORRECTED: This should declare EncounterMan
         return true;
     }
 
-    function endEncounter(outcome) { /* ... (Identical to the last full EncounterManager code I provided, starting from here) ... */ if(!isActive) return; isActive = false; if(UIManager) UIManager.addLogEntry(`Encounter with ${currentAspect.name} concludes. Outcome: ${outcome}.`, "system_major_event"); switch (outcome) { case "player_win_resolve": case "player_win_resonance": const victoryType = outcome === 'player_win_resolve' ? 'Understanding' : 'Integration'; if(UIManager) UIManager.addLogEntry(`You achieved ${victoryType} with ${currentAspect.name}!`, "reward_major"); if (currentAspect.rewards) { if (currentAspect.rewards.insight) currentPlayerRef.modifyInsight(currentAspect.rewards.insight, `resolving ${currentAspect.name}`); if (currentAspect.rewards.conceptPool?.length > 0) { const cardId = currentAspect.rewards.conceptPool[Math.floor(Math.random() * currentAspect.rewards.conceptPool.length)]; if(UIManager) UIManager.addLogEntry(`A new understanding forms: "${CONCEPT_CARD_DEFINITIONS[cardId]?.name}".`, "reward"); currentPlayerRef.addConceptToDeck(cardId, true); } if (currentAspect.rewards.memoryPool?.length > 0) { const memoryId = currentAspect.rewards.memoryPool[Math.floor(Math.random() * currentAspect.rewards.memoryPool.length)]; currentPlayerRef.addMemory(memoryId); } } break; case "player_flee": if(UIManager) UIManager.addLogEntry("You disengage.", "system"); currentPlayerRef.modifyClarity(-2, "fleeing"); currentPlayerRef.modifyDespair(1, "unresolved encounter"); break; case "aspect_win": if(UIManager) UIManager.addLogEntry(`${currentAspect.name} overwhelmed your psyche.`, "critical"); break; case "aspect_fled": if(UIManager) UIManager.addLogEntry(`${currentAspect.name} faded. An enigma remains.`, "system_negative"); currentPlayerRef.modifyDespair(1, `${currentAspect.name} disengaged`); break; } currentAspect = null; playerEncounterState = { composure: 0, disorientationClaritySpentThisTurn: false }; if(Game && Game.returnFromEncounter) Game.returnFromEncounter(viewToReturnToAfterEncounter); }
-    function _startPlayerTurn() { if (!isActive || !currentAspect) return; if(UIManager) UIManager.addLogEntry("--- Your Turn ---", "turn"); playerEncounterState.disorientationClaritySpentThisTurn = false; currentPlayerRef.startTurnInEncounter(); _updateEncounterUIDisplay(); if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = false; if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
-    function _endPlayerTurn() { if (!isActive || !currentAspect) return; if(UIManager) UIManager.addLogEntry("You steady your thoughts, ending your turn.", "system"); if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = true; _startAspectTurn(); }
-    function _startAspectTurn() { if (!isActive || !currentAspect) return; currentAspect.turnCount++; if(UIManager) UIManager.addLogEntry(`--- ${currentAspect.name}'s Turn (${currentAspect.turnCount}) ---`, "turn"); if (currentAspect.tookPressureThisTurn && currentAspect.visibleTraits.some(t => t.name.includes("Grudge Holder"))) { _gainAspectComposure(1, "Grudge Holder Trait"); } currentAspect.tookPressureThisTurn = false; _updateAspectStates(); if (currentAspect.currentIntent && typeof aspectIntentEffects[currentAspect.currentIntent.functionName] === 'function') { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} intends: ${currentAspect.currentIntent.description}`, "intent"); aspectIntentEffects[currentAspect.currentIntent.functionName](currentAspect.currentIntent.params || {}); } else { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} hesitates.`, "system"); } if (_checkEncounterWinLoss()) return; _chooseAspectIntent(); _updateEncounterUIDisplay(); if (isActive) { setTimeout(() => { if (isActive) _startPlayerTurn(); }, 800); } }
-    function playConceptCard(cardId) { if (!isActive || !currentPlayerRef || !currentAspect) return; const cardDef = CONCEPT_CARD_DEFINITIONS[cardId]; if (!cardDef) { if(UIManager) UIManager.addLogEntry(`Error playing unknown Concept ID: ${cardId}`, "error"); return; } let actualCost = cardDef.cost; const disorientationInHand = currentPlayerRef.hand.some(id => id === "TRM001"); if (cardDef.id !== "TRM001" && disorientationInHand && !playerEncounterState.disorientationClaritySpentThisTurn) { actualCost += 1; } if (!currentPlayerRef.spendFocusForCard(actualCost, cardDef.name)) return; const playedCard = currentPlayerRef.playCardFromHand(cardId); if (!playedCard) { console.error(`Failed to retrieve ${cardId} from hand after focus spend.`); return; } if(UIManager) UIManager.addLogEntry(`Played ${cardDef.name}.`, "player_action"); if (cardDef.effectFunctionName && typeof conceptCardEffects[cardDef.effectFunctionName] === 'function') { conceptCardEffects[cardDef.effectFunctionName](cardDef); } else { if(UIManager) UIManager.addLogEntry(`Effect for ${cardDef.name} not yet defined.`, "error"); } if (cardDef.keywords.includes("#DissonanceSource") && currentAspect.visibleTraits.some(t => t.name.includes("Feeds on Negativity"))) { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} draws strength from the dissonance!`, "aspect_action_subtle"); _gainAspectComposure(1, "Feeds on Negativity"); } const isChallenge = cardDef.keywords.includes("#Challenge"); const lashesOutTrait = currentAspect.hiddenTraits.find(t => t.name.includes("Lashes Out") && currentAspect.revealedTraits.includes(t.name)); if (isChallenge && lashesOutTrait && currentAspect.resolve < (currentAspect.maxResolve * 0.4)) { if(UIManager) UIManager.addLogEntry(`TRAIT TRIGGER: ${currentAspect.name} 'Lashes Out When Cornered'!`, "critical"); const lashOutIntent = currentAspect.intents.find(intent => intent.id === "INT_DOUBT_01" || intent.name.includes("Jab")); if (lashOutIntent && typeof aspectIntentEffects[lashOutIntent.functionName] === 'function') { aspectIntentEffects[lashOutIntent.functionName](lashOutIntent.params || {}); } } _updateEncounterUIDisplay(); if (_checkEncounterWinLoss()) return; if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
+    function endEncounter(outcome) {
+        if(!isActive) return; 
+        isActive = false;
+        if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Encounter with ${currentAspect.name} concludes. Outcome: ${outcome}.`, "system_major_event");
+
+        switch (outcome) {
+            case "player_win_resolve":
+            case "player_win_resonance":
+                const victoryType = outcome === 'player_win_resolve' ? 'Understanding' : 'Integration';
+                if(UIManager) UIManager.addLogEntry(`You achieved ${victoryType} with ${currentAspect.name}!`, "reward_major");
+                if (currentAspect.rewards) {
+                    if (currentAspect.rewards.insight) currentPlayerRef.modifyInsight(currentAspect.rewards.insight, `resolving ${currentAspect.name}`);
+                    if (currentAspect.rewards.conceptPool?.length > 0) {
+                        const cardId = currentAspect.rewards.conceptPool[Math.floor(Math.random() * currentAspect.rewards.conceptPool.length)];
+                        if(UIManager) UIManager.addLogEntry(`A new understanding forms: "${CONCEPT_CARD_DEFINITIONS[cardId]?.name}".`, "reward"); // Assumes CONCEPT_CARD_DEFINITIONS is global
+                        currentPlayerRef.addConceptToDeck(cardId, true);
+                    }
+                    if (currentAspect.rewards.memoryPool?.length > 0) {
+                        const memoryId = currentAspect.rewards.memoryPool[Math.floor(Math.random() * currentAspect.rewards.memoryPool.length)];
+                        currentPlayerRef.addMemory(memoryId);
+                    }
+                }
+                break;
+            case "player_flee": if(UIManager) UIManager.addLogEntry("You disengage.", "system"); currentPlayerRef.modifyClarity(-2, "fleeing"); currentPlayerRef.modifyDespair(1, "unresolved encounter"); break;
+            case "aspect_win": if(UIManager) UIManager.addLogEntry(`${currentAspect.name} overwhelmed your psyche.`, "critical"); break;
+            case "aspect_fled": if(UIManager) UIManager.addLogEntry(`${currentAspect.name} faded. An enigma remains.`, "system_negative"); currentPlayerRef.modifyDespair(1, `${currentAspect.name} disengaged`); break;
+        }
+        currentAspect = null;
+        playerEncounterState = { composure: 0, disorientationClaritySpentThisTurn: false };
+        if(typeof Game !== 'undefined' && Game.returnFromEncounter) Game.returnFromEncounter(viewToReturnToAfterEncounter);
+    }
+
+    function _startPlayerTurn() {
+        if (!isActive || !currentAspect) return;
+        if(UIManager) UIManager.addLogEntry("--- Your Turn ---", "turn");
+        playerEncounterState.disorientationClaritySpentThisTurn = false;
+        currentPlayerRef.startTurnInEncounter(); 
+        _updateEncounterUIDisplay();
+        if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = false;
+        if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0);
+    }
+
+    function _endPlayerTurn() {
+        if (!isActive || !currentAspect) return;
+        if(UIManager) UIManager.addLogEntry("You steady your thoughts, ending your turn.", "system");
+        if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = true;
+        _startAspectTurn();
+    }
+
+    function _startAspectTurn() {
+        if (!isActive || !currentAspect) return;
+        currentAspect.turnCount++;
+        if(UIManager) UIManager.addLogEntry(`--- ${currentAspect.name}'s Turn (${currentAspect.turnCount}) ---`, "turn");
+        if (currentAspect.tookPressureThisTurn && currentAspect.visibleTraits.some(t => t.name.includes("Grudge Holder"))) { _gainAspectComposure(1, "Grudge Holder Trait"); }
+        currentAspect.tookPressureThisTurn = false;
+        _updateAspectStates();
+        if (currentAspect.currentIntent && typeof aspectIntentEffects[currentAspect.currentIntent.functionName] === 'function') {
+            if(UIManager) UIManager.addLogEntry(`${currentAspect.name} intends: ${currentAspect.currentIntent.description}`, "intent");
+            aspectIntentEffects[currentAspect.currentIntent.functionName](currentAspect.currentIntent.params || {});
+        } else { if(UIManager) UIManager.addLogEntry(`${currentAspect.name} hesitates.`, "system"); }
+        if (_checkEncounterWinLoss()) return;
+        _chooseAspectIntent();
+        _updateEncounterUIDisplay();
+        if (isActive) { setTimeout(() => { if (isActive) _startPlayerTurn(); }, 800); }
+    }
+
+    function playConceptCard(cardId) {
+        if (!isActive || !currentPlayerRef || !currentAspect) return;
+        const cardDef = CONCEPT_CARD_DEFINITIONS[cardId]; 
+        if (!cardDef) { if(UIManager) UIManager.addLogEntry(`Error playing unknown Concept ID: ${cardId}`, "error"); return; }
+
+        let actualCost = cardDef.cost;
+        const disorientationInHand = currentPlayerRef.hand.some(id => id === "TRM001");
+        if (cardDef.id !== "TRM001" && disorientationInHand && !playerEncounterState.disorientationClaritySpentThisTurn) {
+            actualCost += 1;
+        }
+
+        if (!currentPlayerRef.spendFocusForCard(actualCost, cardDef.name)) return;
+
+        const playedCard = currentPlayerRef.playCardFromHand(cardId);
+        if (!playedCard) { console.error(`Failed to retrieve ${cardId} from hand after focus spend.`); return; }
+
+        if(UIManager) UIManager.addLogEntry(`Played ${cardDef.name}.`, "player_action");
+
+        if (cardDef.effectFunctionName && typeof conceptCardEffects[cardDef.effectFunctionName] === 'function') {
+            conceptCardEffects[cardDef.effectFunctionName](cardDef);
+        } else { if(UIManager) UIManager.addLogEntry(`Effect for ${cardDef.name} not yet defined.`, "error"); }
+
+        if (cardDef.keywords.includes("#DissonanceSource") && currentAspect.visibleTraits.some(t => t.name.includes("Feeds on Negativity"))) {
+            if(UIManager) UIManager.addLogEntry(`${currentAspect.name} draws strength from the dissonance!`, "aspect_action_subtle");
+            _gainAspectComposure(1, "Feeds on Negativity");
+        }
+        const isChallenge = cardDef.keywords.includes("#Challenge");
+        const lashesOutTrait = currentAspect.hiddenTraits.find(t => t.name.includes("Lashes Out") && currentAspect.revealedTraits.includes(t.name));
+        if (isChallenge && lashesOutTrait && currentAspect.resolve < (currentAspect.maxResolve * 0.4)) {
+            if(UIManager) UIManager.addLogEntry(`TRAIT TRIGGER: ${currentAspect.name} 'Lashes Out When Cornered'!`, "critical");
+            const lashOutIntent = currentAspect.intents.find(intent => intent.id === "INT_DOUBT_01" || intent.name.includes("Jab")); 
+            if (lashOutIntent && typeof aspectIntentEffects[lashOutIntent.functionName] === 'function') {
+                 aspectIntentEffects[lashOutIntent.functionName](lashOutIntent.params || {});
+            }
+        }
+        _updateEncounterUIDisplay();
+        if (_checkEncounterWinLoss()) return;
+        if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0);
+    }
+
     function _getUnrevealedTraitCount() { if (!currentAspect) return 0; return currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name)).length; }
     function _updateEncounterUIDisplay() { if (!isActive || !currentAspect || !currentPlayerRef || !UIManager) return; UIManager.displayEncounterView(currentAspect, currentPlayerRef, playerEncounterState); UIManager.updatePlayerHand(currentPlayerRef.getHandCardDefinitions()); }
     function _applyPressureToAspect(amount, source = "a Concept") { if (!currentAspect) return; let pressureApplied = amount; if (currentAspect.states.some(s => s.name === "Vulnerable")) pressureApplied *= 1.5; if (currentAspect.composure > 0) { const absorbed = Math.min(pressureApplied, currentAspect.composure); currentAspect.composure -= absorbed; pressureApplied -= absorbed; if(UIManager) UIManager.addLogEntry(`${currentAspect.name}'s Composure absorbs ${absorbed} Pressure.`, "combat"); } if (pressureApplied > 0) { currentAspect.resolve -= Math.floor(pressureApplied); currentAspect.tookPressureThisTurn = true; if(UIManager) UIManager.addLogEntry(`${currentAspect.name} takes ${Math.floor(pressureApplied)} Pressure from ${source}. Resolve: ${currentAspect.resolve}/${currentAspect.maxResolve}`, "combat_crit"); } if (currentAspect.resolve <= 0) currentAspect.resolve = 0; }
@@ -89,7 +189,7 @@ const EncounterManager = (() => { // CORRECTED: This should declare EncounterMan
         playDetachedObservation: (cardDef) => { if(typeof Game !== 'undefined' && Game.setPlayerTempFlag) Game.setPlayerTempFlag("detachedObservationActive", true); else console.warn("Game.setPlayerTempFlag not available for Detached Observation"); if(UIManager) UIManager.addLogEntry("Perspective shifts: your next query will be more focused.", "system_positive"); currentPlayerRef.drawCards(1); },
         playStandardInquiry: (cardDef) => { revealHiddenAspectTrait(); _buildResonance(1, cardDef.name); },
         playStandardChallenge: (cardDef) => { _applyPressureToAspect(4, cardDef.name); _buildDissonance(1, cardDef.name); },
-        onDrawDisorientation: (cardDef) => { if(UIManager) UIManager.addLogEntry(`TRAUMA EFFECT: ${cardDef.name} clouds your thoughts! (Card costs +1 Focus this turn unless 1 Clarity spent).`, "trauma_major"); if(typeof Game !== 'undefined' && Game.handleTraumaOnDraw) Game.handleTraumaOnDraw(cardDef.id, cardDef.onDrawFunctionName);}, // Pass cardId too
+        onDrawDisorientation: (cardDef) => { if(UIManager) UIManager.addLogEntry(`TRAUMA EFFECT: ${cardDef.name} clouds your thoughts! (Card costs +1 Focus this turn unless 1 Clarity spent).`, "trauma_major"); if(typeof Game !== 'undefined' && Game.handleTraumaOnDraw) Game.handleTraumaOnDraw(cardDef.id, cardDef.onDrawFunctionName);},
         playDisorientation: (cardDef) => { _buildDissonance(1, cardDef.name + " (played)"); }
     };
 
@@ -109,6 +209,6 @@ const EncounterManager = (() => { // CORRECTED: This should declare EncounterMan
         canSpendClarityForDisorientation: () => currentPlayerRef && currentPlayerRef.clarity > 0 && currentPlayerRef.hand.some(id => id === "TRM001") && playerEncounterState && !playerEncounterState.disorientationClaritySpentThisTurn,
         spendClarityForDisorientation: () => { if (currentPlayerRef && currentPlayerRef.clarity > 0 && playerEncounterState) { currentPlayerRef.modifyClarity(-1, "negating Disorientation"); playerEncounterState.disorientationClaritySpentThisTurn = true; if(UIManager) UIManager.addLogEntry("You spend 1 Clarity to clear Disorientation's immediate effect.", "player_action_good"); _updateEncounterUIDisplay(); return true; } return false; },
         getConceptCardEffectFunction: (functionName) => conceptCardEffects[functionName],
-        playerEncounterState
+        playerEncounterState 
     };
 })();

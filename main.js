@@ -75,7 +75,7 @@ class UIManager {
         if (this.storyletTextEl) this.storyletTextEl.innerHTML = text.replace(/\n/g, '<br>'); // Preserve newlines
     }
 
-    showStoryletDisplay() { // <<< --- METHOD ADDED HERE ---
+    showStoryletDisplay() {
         if (this.storyletDisplayEl) this.storyletDisplayEl.classList.remove('hidden');
     }
 
@@ -88,7 +88,7 @@ class UIManager {
 
     createChoiceButton(choiceData, index, isAvailable, requirementText, onClickCallback) {
         const button = document.createElement('button');
-        // Ensure gameStateRef is available for dynamic text function
+        // Ensure gameStateRef is available for dynamic text function if choiceData.text is a function
         let buttonText = typeof choiceData.text === 'function' ? choiceData.text(R1_CONFIG.gameStateRef) : choiceData.text;
         button.innerHTML = `${buttonText} <span class="requirement">${requirementText || ''}</span>`;
         button.disabled = !isAvailable;
@@ -97,7 +97,7 @@ class UIManager {
     }
 
     updateEventLog(message) {
-        if (!this.eventLogContentEl) return;
+        if (!this.eventLogContentEl || !message || message.trim() === "") return; // Don't log empty messages
         const newMessageEl = document.createElement('p');
         newMessageEl.textContent = message;
         // Prepend new message to keep latest at top, and limit log size
@@ -108,7 +108,12 @@ class UIManager {
     }
 
     updateAmbition(ambitionText) {
-        if (this.ambitionTextEl) this.ambitionTextEl.textContent = ambitionText;
+        if (this.ambitionTextEl) {
+            if(this.ambitionTextEl.textContent !== ambitionText) { // Only log if it changes
+                this.updateEventLog(`Ambition Updated: ${ambitionText}`);
+            }
+            this.ambitionTextEl.textContent = ambitionText;
+        }
     }
 
     updateConcepts(playerConcepts, allConceptsData) {
@@ -143,94 +148,99 @@ class UIManager {
 
     setMainButton(text, callback) {
         if (this.mainActionButton) {
-            this.mainActionButton.textContent = text;
-            // To avoid multiple listeners piling up if callback is an anonymous function:
-            // Clone and replace the button, or manage event listeners more carefully.
-            // For simplicity here, we'll just reassign, assuming callbacks are managed.
+            // Clone and replace the button to safely change the event listener
             const newButton = this.mainActionButton.cloneNode(true);
             newButton.textContent = text;
-            newButton.onclick = callback;
+            newButton.onclick = callback; // Assign new callback
             this.mainActionButton.parentNode.replaceChild(newButton, this.mainActionButton);
-            this.mainActionButton = newButton;
+            this.mainActionButton = newButton; // Update the reference
         }
     }
 }
 
 // --- Game State and Logic ---
 const gameState = {
-    player_character: { ...R1_CONFIG.gameSettings.initialPlayerStats },
+    player_character: { ...R1_CONFIG.gameSettings.initialPlayerStats }, // Deep copy for safety
     inventory: {
         concepts: [],
         key_items: [],
-        resources: { // Example: clarity, etc.
-            clarity: 0
+        resources: {
+            // clarity: 0 // Will be initialized from initialPlayerStats if present
         }
     },
-    world_state: { // For story flags, completed storylets, etc.
-        // Example: ShatteredShore_story_flags: { awakening_complete: true }
-        // Example: completed_storylets: ["SS01_Awakening_Name"]
-        ShatteredShore_story_flags: {}, // Initialize story flags for locations
+    world_state: {
+        ShatteredShore_story_flags: {},
         HearthstoneGrotto_story_flags: {},
         FlotsamGraveyards_story_flags: {},
         MuseumOfLostIdentities_story_flags: {},
         CrystallinePassageEntry_story_flags: {},
         WeepingKelpFringe_story_flags: {},
         GardenPathEntry_story_flags: {},
-        completed_storylets: []
+        WhisperingIsle_story_flags: {},
+        completed_storylets: [],
+        // regional_quest_R1: {} // This will be initialized by the quest giver storylet
     },
     currentLocation: R1_CONFIG.gameSettings.startingLocation,
     currentRegion: R1_CONFIG.gameSettings.startingRegion,
     ambition: R1_CONFIG.gameSettings.initialAmbition,
 
-    // Helper functions to modify gameState, ensuring UI updates can be triggered
+    // Helper functions to modify gameState
     addConcept: function(conceptId) {
         if (!this.inventory.concepts.includes(conceptId)) {
             this.inventory.concepts.push(conceptId);
             const conceptData = R1_CONFIG.concepts[conceptId];
+            let logMsg = "";
             if (conceptData && typeof conceptData.onAcquire === 'function') {
-                uiManager.updateEventLog(conceptData.onAcquire(this)); // Pass 'this' (gameState)
+                logMsg = conceptData.onAcquire(this); // Pass 'this' (gameState)
             } else if (conceptData) {
-                 uiManager.updateEventLog(`New Concept Acquired: ${conceptData.name}`);
+                 logMsg = `New Concept Acquired: ${conceptData.name}`;
             }
-            uiManager.updateConcepts(this.inventory.concepts, R1_CONFIG.concepts);
+            if (uiManager) uiManager.updateEventLog(logMsg); // Check if uiManager is initialized
+            if (uiManager) uiManager.updateConcepts(this.inventory.concepts, R1_CONFIG.concepts);
         }
     },
     removeConcept: function(conceptId) {
         this.inventory.concepts = this.inventory.concepts.filter(c => c !== conceptId);
-        uiManager.updateConcepts(this.inventory.concepts, R1_CONFIG.concepts);
+        if (uiManager) uiManager.updateConcepts(this.inventory.concepts, R1_CONFIG.concepts);
     },
-    addItem: function(itemName, itemCategory = "key_items") { // itemCategory can be 'key_items' or 'resources'
+    addItem: function(itemName, itemCategory = "key_items") {
         if (itemCategory === "key_items") {
             if (!this.inventory.key_items.includes(itemName)) {
                 this.inventory.key_items.push(itemName);
-                uiManager.updateEventLog(`Acquired Item: ${itemName}`);
-                uiManager.updateKeyItems(this.inventory.key_items);
+                if (uiManager) uiManager.updateEventLog(`Acquired Item: ${itemName}`);
+                if (uiManager) uiManager.updateKeyItems(this.inventory.key_items);
             }
-        } else if (itemCategory === "resources") { // Note: 'clarity' is under player_character in config, this is for generic resources
+        } else if (itemCategory === "resources") {
             this.inventory.resources[itemName] = (this.inventory.resources[itemName] || 0) + 1;
-            // uiManager.updateResourcesDisplay(); // If you add a resources display
-            uiManager.updateEventLog(`Gained Resource: ${itemName}`);
+            if (uiManager) uiManager.updateEventLog(`Gained Resource: ${itemName}`);
+            // if (uiManager) uiManager.updateResourcesDisplay(); // If you add a resources display
         }
     },
     removeItem: function(itemName, itemCategory = "key_items") {
+        let removed = false;
         if (itemCategory === "key_items") {
+            const initialLength = this.inventory.key_items.length;
             this.inventory.key_items = this.inventory.key_items.filter(i => i !== itemName);
-            uiManager.updateKeyItems(this.inventory.key_items);
+            removed = this.inventory.key_items.length < initialLength;
+            if (removed && uiManager) uiManager.updateKeyItems(this.inventory.key_items);
         } else if (itemCategory === "resources") {
-            if (this.inventory.resources[itemName]) {
+            if (this.inventory.resources[itemName] && this.inventory.resources[itemName] > 0) {
                 this.inventory.resources[itemName]--;
+                removed = true;
                 if (this.inventory.resources[itemName] <= 0) {
                     delete this.inventory.resources[itemName];
                 }
-                // uiManager.updateResourcesDisplay();
+                // if (uiManager) uiManager.updateResourcesDisplay();
             }
         }
+        // if (removed && uiManager) uiManager.updateEventLog(`Lost: ${itemName}`); // Optional: Log item loss
+        return removed; // Return whether item was actually removed
     },
     setWorldFlag: function(flagPath, value) {
         let path = flagPath.split('.');
         let obj = this.world_state;
         for (let i = 0; i < path.length - 1; i++) {
-            if (typeof obj[path[i]] === 'undefined') { // Ensure intermediate objects exist
+            if (typeof obj[path[i]] === 'undefined') {
                 obj[path[i]] = {};
             }
             obj = obj[path[i]];
@@ -254,10 +264,14 @@ let storyletManager;
 
 window.onload = () => {
     uiManager = new UIManager();
-    // Initialize gameState.player_character.clarity if it's meant to be a resource in inventory
+
+    // Handle 'clarity' if it was in initialPlayerStats and should be a resource
     if (typeof gameState.player_character.clarity !== 'undefined') {
         gameState.inventory.resources.clarity = gameState.player_character.clarity;
-        delete gameState.player_character.clarity; // Remove from player_character if it's now in inventory.resources
+        delete gameState.player_character.clarity;
+    } else if (typeof gameState.inventory.resources.clarity === 'undefined') {
+        // Ensure clarity resource exists if not set from player_character
+        gameState.inventory.resources.clarity = 0;
     }
 
 
@@ -265,7 +279,7 @@ window.onload = () => {
 
     // Initial UI setup based on gameState
     uiManager.updatePlayerStats(gameState.player_character);
-    uiManager.updateAmbition(gameState.ambition);
+    uiManager.updateAmbition(gameState.ambition); // This will now also log if ambition changes
     uiManager.updateConcepts(gameState.inventory.concepts, R1_CONFIG.concepts);
     uiManager.updateKeyItems(gameState.inventory.key_items);
     uiManager.updateAttunements(gameState.player_character.attunements);
@@ -273,9 +287,8 @@ window.onload = () => {
     // Start the game by loading the first location and its onEnter storylet
     storyletManager.startCurrentLocation();
 
-    // Setup initial main button action (will be overridden by storylet manager if storylet is active)
-    // The storyletManager.loadStorylet also sets this button when a storylet is active
-    // This is a fallback for when no storylet is active.
+    // The main button's state (text and action) is primarily managed by storyletManager
+    // when a storylet is active or hidden. This is a fallback.
     if (document.getElementById('storylet-display').classList.contains('hidden')) {
         uiManager.setMainButton("Examine Surroundings", () => storyletManager.loadDefaultStoryletForLocation());
     }

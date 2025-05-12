@@ -1,93 +1,81 @@
 // js/ui_manager.js
 
-const UIManager = (() => { // Using an IIFE to create a module-like structure
+const UIManager = (() => {
 
     const DOM = {
         // Header
         psychonautNameDisplay: null,
         currentAmbitionDisplay: null,
 
-        // Player Status Panel
-        playerIntegrityBar: null,
-        playerIntegrityValue: null,
-        playerFocusBar: null,
-        playerFocusValue: null,
-        playerClarityBar: null,
-        playerClarityValue: null,
-        playerHopeBar: null,
-        playerHopeValue: null,
-        playerDespairBar: null,
-        playerDespairValue: null,
-        attunementsListItems: {},
-        activeMemoriesList: null,
-
-        // World Interaction Panel (Views)
+        // Main Stage Views
         preGameIntroView: null,
         preGameTitle: null,
         preGameTextArea: null,
         continueFromPrecipiceButton: null,
-
         mapView: null,
-        locationView: null,
-        storyletView: null,
-        encounterView: null,
-
-        // Map View (Node Map)
+        mapHeaderTitle: null, // For "The Inner Sea - Node Name"
         nodeMapContainer: null,
-        currentNodeMapName: null,
-        mapNodeInfo: null,
+        mapNodeInfoPanel: null,
         currentNodeNameDisplay: null,
         currentNodeDescriptionDisplay: null,
         exploreCurrentNodeButton: null,
-
-        // Location View
+        reflectInsightsButton: null, // New button on map view
+        locationView: null,
         locationName: null,
-        locationDescription: null,
-        locationActions: null,
-        returnToMapFromLocationButton: null,
-
-        // Storylet View
+        locationDescriptionMain: null,
+        locationActionsMain: null,
+        returnToMapFromLocationMainButton: null,
+        storyletView: null,
         storyletTitle: null,
-        storyletText: null,
-        storyletChoices: null,
-
-        // Encounter View
-        aspectNameEncounter: null,
+        storyletTextMain: null,
+        storyletChoicesMain: null,
+        encounterView: null,
+        encounterHeaderTitle: null, // For "Encounter: Aspect Name"
+        encounterAspectDisplay: null,
         aspectResolveEncounter: null,
         aspectComposureEncounter: null,
         aspectResonanceEncounter: null,
         aspectDissonanceEncounter: null,
         aspectIntentEncounter: null,
-        aspectTraitsEncounter: null,
-        playerFocusEncounter: null,
-        playerIntegrityEncounter: null,
-        playerComposureEncounter: null,
-        playerStanceEncounter: null,
-        playerHandCards: null,
-        endTurnEncounterButton: null,
+        aspectTraitsEncounterMinimal: null,
+        playerHandEncounterOverlay: null, // New overlay for hand in encounter
         revealTraitEncounterButton: null,
+        endTurnEncounterButton: null,
 
-        // Context Panel
-        deckCountDisplay: null,
-        handCountDisplay: null, 
-        discardCountDisplay: null,
-        traumaCountDisplay: null,
-        viewDeckButton: null,
-        logEntries: null,
-        journalEntries: null,
-        addJournalEntryButton: null,
+        // Dashboard (Bottom Bar)
+        dashboard: null,
+        vitalIntegrityValue: null,
+        vitalFocusValue: null,
+        vitalClarityValue: null,
+        vitalHopeValue: null,
+        vitalDespairValue: null,
+        dashboardJournalButton: null,
+        dashboardStatusButton: null,
+        dashboardConceptsButton: null,
+        dashboardMenuButton: null,
 
-        // Footer
-        gameMenuButton: null,
+        // Event Log Notifications
+        eventLogNotificationsContainer: null,
 
-        // Modals
-        modalOverlay: null,
-        modalDeckView: null,
-        fullDeckList: null,
-        modalGameOver: null,
-        gameOverTitle: null,
-        gameOverText: null,
-        restartGameButton: null,
+        // Full Screen Modals
+        modalOverlayFullscreen: null,
+        journalModal: null,
+        journalEntriesModal: null,
+        addJournalEntryModalButton: null,
+        statusModal: null,
+        statusAttunementsModal: null,
+        statusMemoriesModal: null,
+        conceptsModal: null,
+        conceptsDeckInfoModal: null,
+        conceptsFullDeckListModal: null,
+        reflectInsightsModal: null,
+        playableInsightsList: null,
+        gameOverModalFullscreen: null,
+        gameOverTitleFullscreen: null,
+        gameOverTextFullscreen: null,
+        restartGameModalButton: null,
+        // General close button for modals
+        closeFullscreenModalButtons: [], // Will be a collection
 
         // Tooltip
         tooltip: null,
@@ -96,90 +84,98 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
     let preGameIntroLineIndex = 0;
     let preGameIntroTimeout = null;
 
-    // --- Initialization ---
     function init() {
-        // Cache all DOM elements (ensure IDs match index.html v2.1)
+        // Cache Header
         DOM.psychonautNameDisplay = document.querySelector('#psychonaut-name-display .value');
         DOM.currentAmbitionDisplay = document.querySelector('#current-ambition-display .value');
-        DOM.playerIntegrityBar = document.getElementById('player-integrity-bar');
-        DOM.playerIntegrityValue = document.getElementById('player-integrity-value');
-        DOM.playerFocusBar = document.getElementById('player-focus-bar');
-        DOM.playerFocusValue = document.getElementById('player-focus-value');
-        DOM.playerClarityBar = document.getElementById('player-clarity-bar');
-        DOM.playerClarityValue = document.getElementById('player-clarity-value');
-        DOM.playerHopeBar = document.getElementById('player-hope-bar');
-        DOM.playerHopeValue = document.getElementById('player-hope-value');
-        DOM.playerDespairBar = document.getElementById('player-despair-bar');
-        DOM.playerDespairValue = document.getElementById('player-despair-value');
-        
-        // ATTUNEMENT_DEFINITIONS must be loaded (from config.js) before UIManager.init() is called
-        if (typeof ATTUNEMENT_DEFINITIONS !== 'undefined') {
-            for (const key in ATTUNEMENT_DEFINITIONS) { 
-                DOM.attunementsListItems[key] = document.getElementById(`attunement-${key.charAt(0).toLowerCase()}`);
-            }
-        } else {
-            console.error("UIManager.init: ATTUNEMENT_DEFINITIONS not available. Ensure config.js is loaded first.");
-        }
-        DOM.activeMemoriesList = document.getElementById('active-memories-list');
+
+        // Cache Main Stage Views
         DOM.preGameIntroView = document.getElementById('pre-game-intro-view');
         DOM.preGameTitle = document.getElementById('pre-game-title');
         DOM.preGameTextArea = document.getElementById('pre-game-text-area');
         DOM.continueFromPrecipiceButton = document.getElementById('continue-from-precipice');
         DOM.mapView = document.getElementById('map-view');
-        DOM.locationView = document.getElementById('location-view');
-        DOM.storyletView = document.getElementById('storylet-view');
-        DOM.encounterView = document.getElementById('encounter-view');
+        DOM.mapHeaderTitle = document.querySelector('#map-view #map-header #current-node-map-name'); // Corrected selector
         DOM.nodeMapContainer = document.getElementById('node-map-container');
-        DOM.currentNodeMapName = document.getElementById('current-node-map-name');
-        DOM.mapNodeInfo = document.getElementById('map-node-info');
+        DOM.mapNodeInfoPanel = document.getElementById('map-node-interaction-panel'); // The whole bottom bar of map view
         DOM.currentNodeNameDisplay = document.getElementById('current-node-name-display');
         DOM.currentNodeDescriptionDisplay = document.getElementById('current-node-description-display');
         DOM.exploreCurrentNodeButton = document.getElementById('explore-current-node-button');
-        DOM.locationName = document.getElementById('location-name');
-        DOM.locationDescription = document.getElementById('location-description');
-        DOM.locationActions = document.getElementById('location-actions');
-        DOM.returnToMapFromLocationButton = document.getElementById('return-to-map-from-location');
-        DOM.storyletTitle = document.getElementById('storylet-title');
-        DOM.storyletText = document.getElementById('storylet-text');
-        DOM.storyletChoices = document.getElementById('storylet-choices');
-        DOM.aspectNameEncounter = document.getElementById('aspect-name-encounter');
+        DOM.reflectInsightsButton = document.getElementById('reflect-insights-button');
+        DOM.locationView = document.getElementById('location-view');
+        DOM.locationName = document.querySelector('#location-view #location-name');
+        DOM.locationDescriptionMain = document.getElementById('location-description-main');
+        DOM.locationActionsMain = document.getElementById('location-actions-main');
+        DOM.returnToMapFromLocationMainButton = document.getElementById('return-to-map-from-location-main');
+        DOM.storyletView = document.getElementById('storylet-view');
+        DOM.storyletTitle = document.querySelector('#storylet-view #storylet-title');
+        DOM.storyletTextMain = document.getElementById('storylet-text-main');
+        DOM.storyletChoicesMain = document.getElementById('storylet-choices-main');
+        DOM.encounterView = document.getElementById('encounter-view');
+        DOM.encounterHeaderTitle = document.querySelector('#encounter-view #encounter-header #aspect-name-encounter');
+        DOM.encounterAspectDisplay = document.getElementById('encounter-aspect-display');
         DOM.aspectResolveEncounter = document.getElementById('aspect-resolve-encounter');
         DOM.aspectComposureEncounter = document.getElementById('aspect-composure-encounter');
         DOM.aspectResonanceEncounter = document.getElementById('aspect-resonance-encounter');
         DOM.aspectDissonanceEncounter = document.getElementById('aspect-dissonance-encounter');
         DOM.aspectIntentEncounter = document.getElementById('aspect-intent-encounter');
-        DOM.aspectTraitsEncounter = document.getElementById('aspect-traits-encounter');
-        DOM.playerFocusEncounter = document.getElementById('player-focus-encounter');
-        DOM.playerIntegrityEncounter = document.getElementById('player-integrity-encounter');
-        DOM.playerComposureEncounter = document.getElementById('player-composure-encounter');
-        DOM.playerStanceEncounter = document.getElementById('player-stance-encounter');
-        DOM.playerHandCards = document.getElementById('player-hand-cards');
-        DOM.endTurnEncounterButton = document.getElementById('end-turn-encounter');
-        DOM.revealTraitEncounterButton = document.getElementById('reveal-trait-encounter');
-        DOM.deckCountDisplay = document.getElementById('deck-count-display');
-        DOM.handCountDisplay = document.getElementById('hand-count-display'); 
-        DOM.discardCountDisplay = document.getElementById('discard-count-display');
-        DOM.traumaCountDisplay = document.getElementById('trauma-count-display');
-        DOM.viewDeckButton = document.getElementById('view-deck-button');
-        DOM.logEntries = document.getElementById('log-entries');
-        DOM.journalEntries = document.getElementById('journal-entries');
-        DOM.addJournalEntryButton = document.getElementById('add-journal-entry-button');
-        DOM.gameMenuButton = document.getElementById('game-menu-button');
-        DOM.modalOverlay = document.getElementById('modal-overlay');
-        DOM.modalDeckView = document.getElementById('modal-deck-view');
-        DOM.fullDeckList = document.getElementById('full-deck-list');
-        DOM.modalGameOver = document.getElementById('modal-game-over');
-        DOM.gameOverTitle = document.getElementById('game-over-title');
-        DOM.gameOverText = document.getElementById('game-over-text');
-        DOM.restartGameButton = document.getElementById('restart-game-button');
+        DOM.aspectTraitsEncounterMinimal = document.getElementById('aspect-traits-encounter-minimal');
+        DOM.playerHandEncounterOverlay = document.getElementById('player-hand-encounter-overlay');
+        DOM.revealTraitEncounterButton = document.querySelector('#encounter-view #reveal-trait-encounter'); // More specific
+        DOM.endTurnEncounterButton = document.querySelector('#encounter-view #end-turn-encounter'); // More specific
+
+        // Cache Dashboard
+        DOM.dashboard = document.getElementById('psychonaut-dashboard');
+        DOM.vitalIntegrityValue = document.querySelector('#vital-integrity .value');
+        DOM.vitalFocusValue = document.querySelector('#vital-focus .value');
+        DOM.vitalClarityValue = document.querySelector('#vital-clarity .value');
+        DOM.vitalHopeValue = document.querySelector('#vital-hope .value');
+        DOM.vitalDespairValue = document.querySelector('#vital-despair .value');
+        DOM.dashboardJournalButton = document.getElementById('dashboard-journal-button');
+        DOM.dashboardStatusButton = document.getElementById('dashboard-status-button');
+        DOM.dashboardConceptsButton = document.getElementById('dashboard-concepts-button');
+        DOM.dashboardMenuButton = document.getElementById('dashboard-menu-button');
+
+        // Cache Event Log Notifications
+        DOM.eventLogNotificationsContainer = document.getElementById('event-log-notifications');
+
+        // Cache Modals
+        DOM.modalOverlayFullscreen = document.getElementById('modal-overlay-fullscreen');
+        DOM.journalModal = document.getElementById('journal-modal');
+        DOM.journalEntriesModal = document.getElementById('journal-entries-modal');
+        DOM.addJournalEntryModalButton = document.getElementById('add-journal-entry-modal-button');
+        DOM.statusModal = document.getElementById('status-modal');
+        DOM.statusAttunementsModal = document.getElementById('status-attunements-modal');
+        DOM.statusMemoriesModal = document.getElementById('status-memories-modal');
+        DOM.conceptsModal = document.getElementById('concepts-modal');
+        DOM.conceptsDeckInfoModal = document.getElementById('concepts-deck-info-modal');
+        DOM.conceptsFullDeckListModal = document.getElementById('concepts-full-deck-list-modal');
+        DOM.reflectInsightsModal = document.getElementById('reflect-insights-modal');
+        DOM.playableInsightsList = document.getElementById('playable-insights-list');
+        DOM.gameOverModalFullscreen = document.getElementById('game-over-modal-fullscreen');
+        DOM.gameOverTitleFullscreen = document.getElementById('game-over-title-fullscreen');
+        DOM.gameOverTextFullscreen = document.getElementById('game-over-text-fullscreen');
+        DOM.restartGameModalButton = document.getElementById('restart-game-modal-button');
+        DOM.closeFullscreenModalButtons = document.querySelectorAll('.close-fullscreen-modal-button');
+
         DOM.tooltip = document.getElementById('tooltip');
-        console.log("UIManager (v2.1 Awakening - Full) initialized and DOM elements cached.");
+        console.log("UIManager (v3 Immersive UI - Full) initialized and DOM elements cached.");
     }
 
-    function _updateBar(barElement, value, maxValue) { if (barElement && typeof value === 'number' && typeof maxValue === 'number' && maxValue >= 0) { const percentage = maxValue === 0 ? 0 : Math.max(0, Math.min(100, (value / maxValue) * 100)); barElement.style.width = percentage + '%'; } else if (barElement) { barElement.style.width = '0%'; } }
+    function _updateBar(barElement, value, maxValue, barContainerElement = null) { 
+        // barContainerElement is not used in this simple bar, but could be for text overlays
+        if (barElement && typeof value === 'number' && typeof maxValue === 'number' && maxValue >= 0) {
+            const percentage = maxValue === 0 ? 0 : Math.max(0, Math.min(100, (value / maxValue) * 100));
+            barElement.style.width = percentage + '%';
+        } else if (barElement) {
+            barElement.style.width = '0%';
+        }
+    }
     function _setText(element, text) { if (element) element.textContent = text; }
     function _setHTML(element, html) { if (element) element.innerHTML = html; }
 
+    // This function *only* manipulates DOM class lists for visibility of STAGE views.
+    // The game's conceptual currentViewId is managed by main.js.
     function _showViewActualDOM(viewToShowId) {
         const views = [ DOM.preGameIntroView, DOM.mapView, DOM.locationView, DOM.storyletView, DOM.encounterView ];
         views.forEach(view => {
@@ -204,7 +200,7 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
         if (typeof PRE_GAME_INTRO_LINES !== 'undefined' && typeof CONFIG !== 'undefined' && preGameIntroLineIndex < PRE_GAME_INTRO_LINES.length) { 
             const p = document.createElement('p'); 
             p.classList.add('intro-line'); 
-            p.style.animationDelay = `${preGameIntroLineIndex * 0.25}s`; 
+            p.style.animationDelay = `${preGameIntroLineIndex * (CONFIG.PRE_GAME_INTRO_LINE_DELAY / 2000)}s`; // Adjust animation delay if needed
             p.innerHTML = PRE_GAME_INTRO_LINES[preGameIntroLineIndex]; 
             if (DOM.preGameTextArea) DOM.preGameTextArea.appendChild(p); 
             preGameIntroLineIndex++; 
@@ -217,66 +213,248 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
     }
     function clearPreGameIntroTimeout() { if (preGameIntroTimeout) clearTimeout(preGameIntroTimeout); preGameIntroTimeout = null; }
 
-    function updatePlayerStats(playerData) { if (!playerData) return; _setText(DOM.playerIntegrityValue, `${playerData.integrity}/${playerData.maxIntegrity}`); _updateBar(DOM.playerIntegrityBar, playerData.integrity, playerData.maxIntegrity); _setText(DOM.playerFocusValue, `${playerData.focus}/${playerData.maxFocus}`); _updateBar(DOM.playerFocusBar, playerData.focus, playerData.maxFocus); _setText(DOM.playerClarityValue, `${playerData.clarity}/${playerData.maxClarity}`); _updateBar(DOM.playerClarityBar, playerData.clarity, playerData.maxClarity); _setText(DOM.playerHopeValue, `${playerData.hope}/${playerData.maxHope}`); _updateBar(DOM.playerHopeBar, playerData.hope, playerData.maxHope); _setText(DOM.playerDespairValue, `${playerData.despair}/${playerData.maxDespair}`); _updateBar(DOM.playerDespairBar, playerData.despair, playerData.maxDespair); if (playerData.attunements && typeof ATTUNEMENT_DEFINITIONS !== 'undefined') { for (const key in playerData.attunements) { if (DOM.attunementsListItems[key]) { _setText(DOM.attunementsListItems[key], playerData.attunements[key]); } } } }
-    function updateActiveMemories(memoriesArray) { if (!DOM.activeMemoriesList) return; DOM.activeMemoriesList.innerHTML = ''; if (memoriesArray && memoriesArray.length > 0) { memoriesArray.forEach(memory => { const li = document.createElement('li'); li.textContent = memory.name || memory; DOM.activeMemoriesList.appendChild(li); }); } else { _setHTML(DOM.activeMemoriesList, `<li><span class="placeholder">No memories stir...</span></li>`); } }
+    function updateDashboardVitals(playerData) {
+        if (!playerData || !DOM.dashboard) return;
+        _setText(DOM.vitalIntegrityValue, `${playerData.integrity}/${playerData.maxIntegrity}`);
+        _setText(DOM.vitalFocusValue, `${playerData.focus}/${playerData.maxFocus}`);
+        _setText(DOM.vitalClarityValue, `${playerData.clarity}/${playerData.maxClarity}`);
+        _setText(DOM.vitalHopeValue, `${playerData.hope}/${playerData.maxHope}`);
+        _setText(DOM.vitalDespairValue, `${playerData.despair}/${playerData.maxDespair}`);
+    }
+    
+    // This replaces the old updatePlayerStats for the side panel
+    function updateStatusModal(playerData) {
+        if (!DOM.statusAttunementsModal || !playerData || !playerData.attunements) return;
+        DOM.statusAttunementsModal.innerHTML = '<h3>Attunements</h3><ul>';
+        if (typeof ATTUNEMENT_DEFINITIONS !== 'undefined') {
+            for (const key in playerData.attunements) {
+                const attunementName = ATTUNEMENT_DEFINITIONS[key] ? ATTUNEMENT_DEFINITIONS[key].name : key;
+                DOM.statusAttunementsModal.innerHTML += `<li>${attunementName}: <span class="value">${playerData.attunements[key]}</span></li>`;
+            }
+        }
+        DOM.statusAttunementsModal.innerHTML += '</ul>';
 
-    function renderNodeMap(allNodesData, currentNodeId, accessibleNodeIds = []) { if (!DOM.nodeMapContainer) return; DOM.nodeMapContainer.innerHTML = ''; for (const nodeId in allNodesData) { const nodeData = allNodesData[nodeId]; const nodeEl = document.createElement('div'); nodeEl.classList.add('map-node'); nodeEl.dataset.nodeId = nodeId; nodeEl.style.left = `calc(${nodeData.position.x}% - 60px)`; nodeEl.style.top = `calc(${nodeData.position.y}% - 35px)`; nodeEl.innerHTML = `<span class="map-node-name">${nodeData.name}</span><span class="map-node-type">${nodeData.type || nodeData.shortDesc || ""}</span>`; if (nodeId === currentNodeId) nodeEl.classList.add('current'); if (accessibleNodeIds.includes(nodeId) && nodeId !== currentNodeId) { nodeEl.classList.add('accessible'); } else if (nodeId !== currentNodeId) { nodeEl.classList.add('inaccessible'); } DOM.nodeMapContainer.appendChild(nodeEl); } /* TODO: Line drawing */ }
-    function updateCurrentNodeInfo(nodeData) { if (!nodeData) { _setText(DOM.currentNodeMapName, "The Uncharted Void"); _setText(DOM.currentNodeNameDisplay, "Lost"); _setHTML(DOM.currentNodeDescriptionDisplay, "Your senses fail to grasp this place."); return; } _setText(DOM.currentNodeMapName, nodeData.name); _setText(DOM.currentNodeNameDisplay, nodeData.name); _setHTML(DOM.currentNodeDescriptionDisplay, nodeData.shortDesc || nodeData.description || "An unknown space."); }
+        if (!DOM.statusMemoriesModal) return;
+        DOM.statusMemoriesModal.innerHTML = '<h3>Active Memories</h3><ul>';
+        if (playerData.memories && playerData.memories.length > 0) {
+            playerData.memories.forEach(memory => {
+                DOM.statusMemoriesModal.innerHTML += `<li><strong>${memory.name}:</strong> ${memory.description}</li>`;
+            });
+        } else {
+            DOM.statusMemoriesModal.innerHTML += `<li><span class="placeholder">No memories stir...</span></li>`;
+        }
+        DOM.statusMemoriesModal.innerHTML += '</ul>';
+    }
+
+
+    function renderNodeMap(allNodesData, currentNodeId, accessibleNodeIds = []) { 
+        if (!DOM.nodeMapContainer) return; 
+        DOM.nodeMapContainer.innerHTML = ''; 
+        // TODO: Add SVG element here for drawing lines first, behind nodes.
+        // const svgNS = "http://www.w3.org/2000/svg";
+        // const svgEl = document.createElementNS(svgNS, "svg");
+        // svgEl.setAttribute("width", "100%");
+        // svgEl.setAttribute("height", "100%");
+        // svgEl.style.position = "absolute";
+        // svgEl.style.top = "0";
+        // svgEl.style.left = "0";
+        // svgEl.style.zIndex = "0";
+        // DOM.nodeMapContainer.appendChild(svgEl);
+
+        for (const nodeId in allNodesData) { 
+            const nodeData = allNodesData[nodeId]; 
+            const nodeEl = document.createElement('div'); 
+            nodeEl.classList.add('map-node'); 
+            nodeEl.dataset.nodeId = nodeId; 
+            nodeEl.style.left = `calc(${nodeData.position.x}% - ${130/2}px)`; // Adjust for new node width
+            nodeEl.style.top = `calc(${nodeData.position.y}% - ${75/2}px)`;  // Adjust for new node height
+            nodeEl.innerHTML = `<span class="map-node-name">${nodeData.name}</span><span class="map-node-type">${nodeData.type || nodeData.shortDesc || ""}</span>`; 
+            if (nodeId === currentNodeId) nodeEl.classList.add('current'); 
+            if (accessibleNodeIds.includes(nodeId) && nodeId !== currentNodeId) { 
+                nodeEl.classList.add('accessible'); 
+                // TODO: Draw line from currentNode to this accessibleNode using SVG
+            } else if (nodeId !== currentNodeId) { 
+                nodeEl.classList.add('inaccessible'); 
+            } 
+            DOM.nodeMapContainer.appendChild(nodeEl); 
+        } 
+    }
+    function updateCurrentNodeInfo(nodeData) { 
+        if (!nodeData) { 
+            _setText(DOM.mapHeaderTitle, "The Uncharted Void");
+            _setText(DOM.currentNodeNameDisplay, "Lost"); 
+            _setHTML(DOM.currentNodeDescriptionDisplay, "Your senses fail to grasp this place."); 
+            if(DOM.exploreCurrentNodeButton) DOM.exploreCurrentNodeButton.disabled = true;
+            if(DOM.reflectInsightsButton) DOM.reflectInsightsButton.classList.add('view-hidden');
+            return; 
+        } 
+        _setText(DOM.mapHeaderTitle, nodeData.name); 
+        _setText(DOM.currentNodeNameDisplay, nodeData.name); 
+        _setHTML(DOM.currentNodeDescriptionDisplay, nodeData.shortDesc || nodeData.description || "An unknown space."); 
+        if(DOM.exploreCurrentNodeButton) DOM.exploreCurrentNodeButton.disabled = false;
+        // Logic for reflectInsightsButton visibility would be in main.js
+    }
 
     function displayLocation(locationData) { 
         if (!locationData) return; 
         _setText(DOM.locationName, locationData.name); 
-        _setHTML(DOM.locationDescription, `<p>${locationData.description || "..."}</p>`); 
-        if (DOM.locationActions) { 
-            DOM.locationActions.innerHTML = '<h3>Actions:</h3>'; 
+        _setHTML(DOM.locationDescriptionMain, `<p>${(locationData.description || "...").replace(/\n/g, '</p><p>')}</p>`); 
+        if (DOM.locationActionsMain) { 
+            DOM.locationActionsMain.innerHTML = '<h3>Actions:</h3>'; 
             if (locationData.actions && locationData.actions.length > 0) { 
                 locationData.actions.forEach(actionId => { 
                     const button = document.createElement('button'); 
                     button.dataset.action = actionId; 
                     button.textContent = actionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); 
-                    DOM.locationActions.appendChild(button); 
+                    DOM.locationActionsMain.appendChild(button); 
                 }); 
-            }
-            if(DOM.returnToMapFromLocationButton) { // Ensure static button is appended if actions div was cleared
-                DOM.locationActions.appendChild(DOM.returnToMapFromLocationButton);
-                DOM.returnToMapFromLocationButton.classList.remove('view-hidden');
             }
         } 
     }
     function displayStorylet(storyletInstanceData) { 
         if (!storyletInstanceData) return; 
         _setText(DOM.storyletTitle, storyletInstanceData.title); 
-        _setHTML(DOM.storyletText, `<p>${(storyletInstanceData.text || "").replace(/\n/g, '</p><p>')}</p>`); 
-        if (DOM.storyletChoices) { 
-            DOM.storyletChoices.innerHTML = '<h3>Choices:</h3>'; 
+        _setHTML(DOM.storyletTextMain, `<p>${(storyletInstanceData.text || "").replace(/\n/g, '</p><p>')}</p>`); 
+        if (DOM.storyletChoicesMain) { 
+            DOM.storyletChoicesMain.innerHTML = '<h3>Choices:</h3>'; 
             if (storyletInstanceData.choices && storyletInstanceData.choices.length > 0) { 
                 storyletInstanceData.choices.forEach((choice, index) => { 
                     const button = document.createElement('button'); 
                     button.dataset.choiceIndex = index; 
                     button.textContent = choice.text; 
-                    if (choice.disabled) { 
-                        button.disabled = true; 
-                        button.title = choice.disabledReason || "This choice is currently unavailable."; 
-                    } 
-                    DOM.storyletChoices.appendChild(button); 
+                    if (choice.disabled) { button.disabled = true; button.title = choice.disabledReason || "This choice is currently unavailable."; } 
+                    DOM.storyletChoicesMain.appendChild(button); 
                 }); 
-            } else { _setHTML(DOM.storyletChoices, `<p class="placeholder">No choices present themselves.</p>`); } 
+            } else { _setHTML(DOM.storyletChoicesMain, `<p class="placeholder">No choices present themselves.</p>`); } 
         } 
     }
     function displayEncounterView(aspectData, playerData, playerEncounterState) { 
         if (!aspectData || !playerData || !playerEncounterState) return; 
-        _setText(DOM.aspectNameEncounter, aspectData.name); _setText(DOM.aspectResolveEncounter, `${aspectData.resolve}/${aspectData.maxResolve}`); _setText(DOM.aspectComposureEncounter, aspectData.composure); _setText(DOM.aspectResonanceEncounter, `${aspectData.resonance}/${aspectData.resonanceGoal}`); _setText(DOM.aspectDissonanceEncounter, `${aspectData.dissonance}/${aspectData.dissonanceThreshold}`); _setText(DOM.aspectIntentEncounter, aspectData.currentIntent ? aspectData.currentIntent.description : "Contemplating..."); if (DOM.aspectTraitsEncounter) { DOM.aspectTraitsEncounter.innerHTML = ''; (aspectData.visibleTraits || []).forEach(trait => _addTraitLiToEncounterUI(trait.name, trait.description)); (aspectData.hiddenTraits || []).forEach(trait => { if (aspectData.revealedTraits && aspectData.revealedTraits.includes(trait.name)) { _addTraitLiToEncounterUI(trait.name, trait.description, true); } }); } function _addTraitLiToEncounterUI(name, description, isRevealed = false) { const li = document.createElement('li'); li.innerHTML = `${isRevealed ? '<em>(Revealed)</em> ' : ''}<strong>${name}:</strong> ${description}`; DOM.aspectTraitsEncounter.appendChild(li); } _setText(DOM.playerFocusEncounter, `${playerData.focus}/${playerData.maxFocus}`); _setText(DOM.playerIntegrityEncounter, `${playerData.integrity}/${playerData.maxIntegrity}`); _setText(DOM.playerComposureEncounter, playerEncounterState.composure); _setText(DOM.playerStanceEncounter, playerData.activePersonaStance ? playerData.activePersonaStance.name : "None"); 
+        _setText(DOM.encounterHeaderTitle, aspectData.name); 
+        _setText(DOM.aspectResolveEncounter, `${aspectData.resolve}/${aspectData.maxResolve}`); 
+        _setText(DOM.aspectComposureEncounter, aspectData.composure); 
+        _setText(DOM.aspectResonanceEncounter, `${aspectData.resonance}/${aspectData.resonanceGoal}`); 
+        _setText(DOM.aspectDissonanceEncounter, `${aspectData.dissonance}/${aspectData.dissonanceThreshold}`); 
+        _setText(DOM.aspectIntentEncounter, aspectData.currentIntent ? aspectData.currentIntent.description : "Contemplating..."); 
+        if (DOM.aspectTraitsEncounterMinimal) { 
+            DOM.aspectTraitsEncounterMinimal.innerHTML = ''; 
+            (aspectData.visibleTraits || []).forEach(trait => _addTraitLiToEncounterMinimalUI(trait.name)); 
+            (aspectData.hiddenTraits || []).forEach(trait => { if (aspectData.revealedTraits && aspectData.revealedTraits.includes(trait.name)) { _addTraitLiToEncounterMinimalUI(trait.name, true); } }); 
+        } 
+        function _addTraitLiToEncounterMinimalUI(name, isRevealed = false) { 
+            const span = document.createElement('span'); 
+            span.innerHTML = `${isRevealed ? '<em>(R)</em> ' : ''}${name} `; 
+            DOM.aspectTraitsEncounterMinimal.appendChild(span); 
+        } 
+        // Player vitals are on dashboard, but could show current Focus/Integrity here if needed for clarity
+        // updatePlayerHand will populate the hand overlay
     }
-    function updatePlayerHand(handCardDefinitions) { if (!DOM.playerHandCards) return; DOM.playerHandCards.innerHTML = ''; if (handCardDefinitions && handCardDefinitions.length > 0) { handCardDefinitions.forEach(cardDef => { const cardEl = document.createElement('div'); cardEl.classList.add('encounter-card-placeholder'); cardEl.dataset.cardId = cardDef.id; cardEl.innerHTML = ` <div class="card-name-encounter">${cardDef.name} <span class="card-cost-encounter">${cardDef.cost}F</span></div> <div class="card-type-encounter">${cardDef.type} - ${cardDef.attunement}</div> <div class="card-desc-encounter">${(cardDef.description || "").replace(/\n/g, "<br>")}</div> <div class="card-keywords-encounter">${(cardDef.keywords || []).join(', ')}</div> `; DOM.playerHandCards.appendChild(cardEl); }); } else { _setHTML(DOM.playerHandCards, `<span class="placeholder">No concepts in hand.</span>`); } }
+    function updatePlayerHand(handCardDefinitions) { 
+        if (!DOM.playerHandEncounterOverlay) return; 
+        DOM.playerHandEncounterOverlay.innerHTML = ''; 
+        if (handCardDefinitions && handCardDefinitions.length > 0) { 
+            handCardDefinitions.forEach(cardDef => { 
+                const cardEl = document.createElement('div'); 
+                cardEl.classList.add('encounter-card-placeholder'); 
+                cardEl.dataset.cardId = cardDef.id; 
+                cardEl.innerHTML = ` <div class="card-name-encounter">${cardDef.name} <span class="card-cost-encounter">${cardDef.cost}F</span></div> <div class="card-type-encounter">${cardDef.type}</div> <div class="card-desc-encounter">${(cardDef.description || "").substring(0,50)}...</div> <div class="card-keywords-encounter">${(cardDef.keywords || []).join(', ')}</div> `; 
+                DOM.playerHandEncounterOverlay.appendChild(cardEl); 
+            }); 
+        } else { _setHTML(DOM.playerHandEncounterOverlay, `<span class="placeholder">No concepts in hand.</span>`); } 
+    }
 
-    function updateDeckInfo(deckCount, handCount, discardCount, traumaCount) { _setText(DOM.deckCountDisplay, deckCount); _setText(DOM.handCountDisplay, handCount); _setText(DOM.discardCountDisplay, discardCount); _setText(DOM.traumaCountDisplay, traumaCount); }
-    function addLogEntry(message, type = "normal") { if (!DOM.logEntries || typeof CONFIG === 'undefined') return; const p = document.createElement('p'); p.classList.add('log-entry'); if (type) p.classList.add(type); p.innerHTML = message; DOM.logEntries.appendChild(p); DOM.logEntries.scrollTop = DOM.logEntries.scrollHeight; if (DOM.logEntries.children.length > (CONFIG.LOG_MAX_ENTRIES || 50)) { DOM.logEntries.removeChild(DOM.logEntries.firstChild); } }
-    function addJournalEntry(title, text) { if (!DOM.journalEntries || typeof CONFIG === 'undefined') return; if (DOM.journalEntries.querySelector('.placeholder')) { DOM.journalEntries.innerHTML = ''; } const entryDiv = document.createElement('div'); entryDiv.classList.add('journal-entry'); entryDiv.innerHTML = `<span class="entry-title">${title}:</span> ${text.replace(/\n/g, '<br>')}`; DOM.journalEntries.appendChild(entryDiv); DOM.journalEntries.scrollTop = DOM.journalEntries.scrollHeight; if (DOM.journalEntries.children.length > (CONFIG.JOURNAL_MAX_ENTRIES || 20)) { DOM.journalEntries.removeChild(DOM.journalEntries.firstChild); } }
+    function addEventLogNotification(message, type = "normal", duration = CONFIG.EVENT_NOTIFICATION_DURATION) {
+        if (!DOM.eventLogNotificationsContainer) return;
+        const noteEl = document.createElement('div');
+        noteEl.classList.add('event-log-notification-item', type);
+        noteEl.innerHTML = message; // Allow basic HTML for emphasis
+        DOM.eventLogNotificationsContainer.appendChild(noteEl);
+        setTimeout(() => {
+            noteEl.style.opacity = '0'; // Start fade out
+            setTimeout(() => {
+                if (noteEl.parentElement) noteEl.remove();
+            }, 500); // Remove after fade out
+        }, duration - 500); // Start fading out before full duration
+    }
 
-    function showModal(modalContentElementId) { if (DOM.modalOverlay) { const allModals = DOM.modalOverlay.querySelectorAll('.modal-content'); allModals.forEach(mod => mod.classList.add('view-hidden')); const targetModal = document.getElementById(modalContentElementId); if (targetModal) { targetModal.classList.remove('view-hidden'); DOM.modalOverlay.classList.remove('view-hidden'); } else { console.error("Modal content not found:", modalContentElementId); } } }
-    function hideModals() { if (DOM.modalOverlay) { DOM.modalOverlay.classList.add('view-hidden'); const allModals = DOM.modalOverlay.querySelectorAll('.modal-content'); allModals.forEach(mod => mod.classList.add('view-hidden')); } }
-    function displayFullDeck(deckCardDefinitions) { if (!DOM.fullDeckList) return; DOM.fullDeckList.innerHTML = ''; if (deckCardDefinitions && deckCardDefinitions.length > 0) { deckCardDefinitions.forEach(cardDef => { const li = document.createElement('li'); li.innerHTML = `<strong>${cardDef.name}</strong> (Cost: ${cardDef.cost}F) <br><small><em>${cardDef.type} - ${cardDef.attunement}</em></small><br><small>${(cardDef.description || "").replace(/\n/g,"<br>")}</small>`; DOM.fullDeckList.appendChild(li); }); } else { _setHTML(DOM.fullDeckList, `<li>Your deck is empty.</li>`); } showModal('modal-deck-view'); }
-    function displayGameOver(title, message) { _setText(DOM.gameOverTitle, title); _setText(DOM.gameOverText, message); showModal('modal-game-over'); }
+    // --- Full Screen Modal Updates ---
+    function displayJournalModal(journalEntries) { // journalEntries = array of {title, text}
+        if (!DOM.journalEntriesModal) return;
+        DOM.journalEntriesModal.innerHTML = '';
+        if (journalEntries && journalEntries.length > 0) {
+            journalEntries.forEach(entry => {
+                const entryDiv = document.createElement('div');
+                entryDiv.classList.add('journal-entry');
+                entryDiv.innerHTML = `<h4 class="entry-title">${entry.title}</h4><p>${entry.text.replace(/\n/g, '<br>')}</p>`;
+                DOM.journalEntriesModal.appendChild(entryDiv);
+            });
+        } else {
+            _setHTML(DOM.journalEntriesModal, `<p class="placeholder">The journal is empty.</p>`);
+        }
+        _showModalActualDOM('journal-modal');
+    }
+
+    function displayConceptsModal(deckInfo, fullDeckCardDefinitions) {
+        if (!DOM.conceptsDeckInfoModal || !DOM.conceptsFullDeckListModal) return;
+        _setHTML(DOM.conceptsDeckInfoModal, `
+            <p>In Deck: <span class="value">${deckInfo.deck}</span> | In Hand: <span class="value">${deckInfo.hand}</span></p>
+            <p>In Discard: <span class="value">${deckInfo.discard}</span> | Traumas: <span class="value">${deckInfo.traumas}</span></p>
+        `);
+        DOM.conceptsFullDeckListModal.innerHTML = '';
+        if (fullDeckCardDefinitions && fullDeckCardDefinitions.length > 0) {
+            fullDeckCardDefinitions.forEach(cardDef => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${cardDef.name}</strong> (Cost: ${cardDef.cost}F) <br><small><em>${cardDef.type} - ${cardDef.attunement}</em></small><br><small>${(cardDef.description || "").replace(/\n/g,"<br>")}</small>`;
+                DOM.conceptsFullDeckListModal.appendChild(li);
+            });
+        } else {
+            _setHTML(DOM.conceptsFullDeckListModal, `<li>Your psyche is currently devoid of defined concepts.</li>`);
+        }
+        _showModalActualDOM('concepts-modal');
+    }
+    
+    function displayReflectInsightsModal(playableInsightCards) { // array of cardDef objects
+        if (!DOM.playableInsightsList) return;
+        DOM.playableInsightsList.innerHTML = '';
+        if (playableInsightCards && playableInsightCards.length > 0) {
+            playableInsightCards.forEach(cardDef => {
+                const button = document.createElement('button');
+                button.dataset.cardId = cardDef.id;
+                button.innerHTML = `<strong>${cardDef.name}</strong> (Cost: ${cardDef.cost}F)<br><small>${cardDef.description}</small>`;
+                // Event listener for these buttons will be in main.js
+                DOM.playableInsightsList.appendChild(button);
+            });
+        } else {
+            _setHTML(DOM.playableInsightsList, `<p class="placeholder">No immediate insights to reflect upon.</p>`);
+        }
+        _showModalActualDOM('reflect-insights-modal');
+    }
+
+
+    function displayGameOver(title, message) { 
+        _setText(DOM.gameOverTitleFullscreen, title); 
+        _setText(DOM.gameOverTextFullscreen, message); 
+        _showModalActualDOM('game-over-modal-fullscreen'); 
+    }
+
+    function _showModalActualDOM(modalContentElementId) { 
+        if (DOM.modalOverlayFullscreen) { 
+            const allModals = DOM.modalOverlayFullscreen.querySelectorAll('.fullscreen-modal-content'); 
+            allModals.forEach(mod => mod.classList.add('view-hidden')); 
+            const targetModal = document.getElementById(modalContentElementId); 
+            if (targetModal) { 
+                targetModal.classList.remove('view-hidden'); 
+                DOM.modalOverlayFullscreen.classList.remove('view-hidden'); 
+            } else { console.error("Modal content not found:", modalContentElementId); } 
+        } 
+    }
+    function hideModals() { 
+        if (DOM.modalOverlayFullscreen) { 
+            DOM.modalOverlayFullscreen.classList.add('view-hidden'); 
+            const allModals = DOM.modalOverlayFullscreen.querySelectorAll('.fullscreen-modal-content'); 
+            allModals.forEach(mod => mod.classList.add('view-hidden')); 
+        } 
+    }
 
     function showTooltip(content, event) { if (!DOM.tooltip) return; DOM.tooltip.innerHTML = content; DOM.tooltip.classList.remove('view-hidden'); moveTooltip(event); }
     function hideTooltip() { if (DOM.tooltip) DOM.tooltip.classList.add('view-hidden'); }
@@ -285,14 +463,17 @@ const UIManager = (() => { // Using an IIFE to create a module-like structure
     return {
         init,
         startPreGameIntro, clearPreGameIntroTimeout,
-        updatePlayerStats, updateActiveMemories,
-        _showViewActualDOM, 
+        updateDashboardVitals, updateStatusModal, // Replaced updatePlayerStats
+        _showViewActualDOM, // For Game module to call after setting Game.currentViewId
         renderNodeMap, updateCurrentNodeInfo,
         displayLocation, displayStorylet, 
         displayEncounterView, updatePlayerHand,
-        updateDeckInfo, 
-        addLogEntry, addJournalEntry,
-        showModal, hideModals, displayFullDeck, displayGameOver,
+        // updateDeckInfo is no longer needed as its info is in displayConceptsModal or dashboard
+        addEventLogNotification, // Replaced addLogEntry
+        addJournalEntry, // This is now primarily for Game logic to call for actual journal entries
+        displayJournalModal, displayConceptsModal, displayReflectInsightsModal, // New modal displays
+        hideModals, 
+        displayGameOver,
         showTooltip, hideTooltip, moveTooltip,
         getDOMElement: (elementName) => DOM[elementName]
     };

@@ -2,7 +2,7 @@
 
 const StoryletManager = (() => {
 
-    let activeStoryletData = null;
+    let activeStoryletData = null; 
     let activeStoryletInstance = null; 
     let currentPlayerRef = null;
     let currentWorldRef = null;
@@ -10,7 +10,7 @@ const StoryletManager = (() => {
     function init(player, world) {
         currentPlayerRef = player;
         currentWorldRef = world;
-        console.log("StoryletManager (v2 Awakening - FULL CODE v3) initialized.");
+        console.log("StoryletManager (v2.1 Awakening - Full) initialized.");
     }
 
     function startStorylet(storyletId) {
@@ -58,20 +58,20 @@ const StoryletManager = (() => {
 
     function makeChoice(choiceIndex) {
         if (!activeStoryletInstance || !activeStoryletInstance.choices || choiceIndex < 0 || choiceIndex >= activeStoryletInstance.choices.length) {
-            if(UIManager) UIManager.addLogEntry("Invalid storylet choice made.", "error"); return;
+            if(typeof UIManager !== 'undefined') UIManager.addLogEntry("Invalid storylet choice made.", "error"); return;
         }
         const chosenOption = activeStoryletInstance.choices[choiceIndex];
         if (chosenOption.disabled) {
-            if(UIManager) UIManager.addLogEntry(`Cannot select disabled choice: "${chosenOption.text}" (Reason: ${chosenOption.disabledReason})`, "warning"); return;
+            if(typeof UIManager !== 'undefined') UIManager.addLogEntry(`Cannot select disabled choice: "${chosenOption.text}" (Reason: ${chosenOption.disabledReason})`, "warning"); return;
         }
-        if(UIManager) UIManager.addLogEntry(`Chose: "${chosenOption.text}"`, "choice");
+        if(typeof UIManager !== 'undefined') UIManager.addLogEntry(`Chose: "${chosenOption.text}"`, "choice");
         
         console.log("Player hand JUST BEFORE outcome function is called in StoryletManager.makeChoice:", JSON.stringify(currentPlayerRef.hand));
 
         if (chosenOption.outcomeFunctionName && typeof storyletOutcomes[chosenOption.outcomeFunctionName] === 'function') {
             storyletOutcomes[chosenOption.outcomeFunctionName](chosenOption.params || {});
         } else {
-            if(UIManager) UIManager.addLogEntry(`Outcome function "${chosenOption.outcomeFunctionName}" not implemented for "${chosenOption.text}". Storylet ends.`, "error");
+            if(typeof UIManager !== 'undefined') UIManager.addLogEntry(`Outcome function "${chosenOption.outcomeFunctionName}" not implemented for "${chosenOption.text}". Storylet ends.`, "error");
             console.warn(`Outcome function "${chosenOption.outcomeFunctionName}" not implemented.`);
             endStorylet();
         }
@@ -79,17 +79,21 @@ const StoryletManager = (() => {
 
     function endStorylet(logMessage = "The moment passes into memory.") {
         if (activeStoryletData) { 
-            const currentNode = currentWorldRef.getCurrentNode();
+            const currentNode = currentWorldRef.getCurrentNode(); // Assumes currentWorldRef is set
             if (currentNode && currentNode.storyletOnArrival === activeStoryletData.id && !currentNode.arrivalStoryletCompleted) {
-                currentWorldRef.markArrivalStoryletCompleted(currentNode.id);
+                if (typeof currentWorldRef.markArrivalStoryletCompleted === 'function') {
+                    currentWorldRef.markArrivalStoryletCompleted(currentNode.id);
+                } else {
+                    console.error("currentWorldRef.markArrivalStoryletCompleted is not a function!");
+                }
             }
-            if (UIManager && UIManager.addLogEntry) { 
+            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) { 
                 UIManager.addLogEntry(logMessage, "system"); 
             }
         }
         activeStoryletData = null; 
         activeStoryletInstance = null;
-        if (Game && Game.storyletEnded) Game.storyletEnded();
+        if (typeof Game !== 'undefined' && Game.storyletEnded) Game.storyletEnded();
     }
 
     const storyletConditions = {
@@ -112,7 +116,7 @@ const StoryletManager = (() => {
                     const graspEffectFn = (typeof EncounterManager !== 'undefined') ? EncounterManager.getConceptCardEffectFunction(playedCardDef.effectFunctionName) : null;
                     if (graspEffectFn) { graspEffectFn(playedCardDef); } 
                     else { console.error("Effect for Grasp for Awareness not found."); if(UIManager) UIManager.addLogEntry("The impulse yields confusion.", "system_negative");}
-                    if(Game && Game.refreshPlayerUI) Game.refreshPlayerUI();
+                    if(typeof Game !== 'undefined' && Game.refreshPlayerUI) Game.refreshPlayerUI();
                     endStorylet("A sliver of awareness cuts the fog. The world sharpens slightly.");
                 } else { 
                     if(UIManager) UIManager.addLogEntry("Could not manifest 'Grasp for Awareness' (playCardFromHand failed).", "error");

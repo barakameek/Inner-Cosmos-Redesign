@@ -15,7 +15,7 @@ const Game = (() => {
     let currentMapNodeId = null; 
 
     function init() {
-        console.log("Sunless Psyche Main (v2 Awakening - Final Corrected FULL): Initializing...");
+        console.log("Sunless Psyche Main (v2 Awakening - Full with Explore Fix): Initializing...");
         isGameOver = false;
         preGameIntroActive = true;
 
@@ -28,7 +28,7 @@ const Game = (() => {
         _setupGlobalEventListeners();
         _startGameSequence();
 
-        console.log("Sunless Psyche Main (v2 Awakening - Final Corrected FULL): Initialization complete.");
+        console.log("Sunless Psyche Main (v2 Awakening - Full with Explore Fix): Initialization complete.");
     }
 
     function _startGameSequence() {
@@ -135,13 +135,19 @@ const Game = (() => {
         if (newNodeData) { 
             currentMapNodeId = newNodeData.id; 
             refreshPlayerUI(); 
-            if (newNodeData.storyletOnArrival && !newNodeData.arrivalStoryletCompleted) { // Check if arrival storylet needs to play
+            
+            let storyletToStart = null;
+            if (!newNodeData.arrivalStoryletCompleted && newNodeData.storyletOnArrival) {
+                storyletToStart = newNodeData.storyletOnArrival;
+            }
+
+            if (storyletToStart) { 
                 _switchToView('storylet-view'); 
-                const storyletInstance = storyletMgr.startStorylet(newNodeData.storyletOnArrival); 
+                const storyletInstance = storyletMgr.startStorylet(storyletToStart); 
                 if(storyletInstance) uiMgr.displayStorylet(storyletInstance); 
                 else switchToNodeMapView(); 
             } else { 
-                switchToNodeMapView(); // No new arrival storylet, just show map
+                switchToNodeMapView(); 
             } 
         } 
         _checkGameOver(); 
@@ -153,16 +159,15 @@ const Game = (() => {
         if (node) { 
             uiMgr.addLogEntry(`Delving into ${node.name}...`, "action"); 
 
-            // **NEW LOGIC FOR AWAKENING CARDS ON SHATTERED SHORE**
             if (node.id === "NODE_SHATTERED_SHORE" && node.arrivalStoryletCompleted) {
                 let awakeningCardIdToPlay = null;
-                if (currentPlayer.hand.includes("AWK002")) awakeningCardIdToPlay = "AWK002"; // Fragmented Memory
-                else if (currentPlayer.hand.includes("AWK003")) awakeningCardIdToPlay = "AWK003"; // Echo of a Name
-                else if (currentPlayer.hand.includes("AWK004")) awakeningCardIdToPlay = "AWK004"; // Primal Fear
+                if (currentPlayer.hand.includes("AWK002")) awakeningCardIdToPlay = "AWK002";
+                else if (currentPlayer.hand.includes("AWK003")) awakeningCardIdToPlay = "AWK003";
+                else if (currentPlayer.hand.includes("AWK004")) awakeningCardIdToPlay = "AWK004";
 
                 if (awakeningCardIdToPlay) {
                     const cardDef = CONCEPT_CARD_DEFINITIONS[awakeningCardIdToPlay];
-                    uiMgr.addLogEntry(`You focus on the lingering insight: "${cardDef.name}"...`, "player_action");
+                    uiMgr.addLogEntry(`You focus on the lingering insight: "${cardDef.name}"...`, "player_action_major");
 
                     if (currentPlayer.spendFocusForCard(cardDef.cost, cardDef.name)) {
                         currentPlayer.playCardFromHand(cardDef.id); 
@@ -180,20 +185,23 @@ const Game = (() => {
                             if (nextAwakeningCardId) {
                                 refreshPlayerUI(); 
                                 uiMgr.addLogEntry("Another fragmented thought surfaces...", "discovery");
+                                uiMgr.addLogEntry(`Hint: Consider exploring "${node.name}" again to process new insights.`, "tutorial_hint");
                             }
                         } else if (currentPlayer.awakeningDeck.length === 0 && !currentPlayer.hand.some(id => id.startsWith("AWK"))) {
                             uiMgr.addLogEntry("The initial flood of fractured insights subsides. The way forward is slightly clearer.", "system_positive_strong");
+                            if(currentViewId === 'map-view') _updateAndRenderNodeMap();
                         }
                     }
-                    // After processing an awakening card, stay on map view (or refresh it)
-                    // No need to call switchToNodeMapView() if already in map view, _updateAndRenderNodeMap will refresh if needed.
-                    // If any other view was active, this logic wouldn't be hit, so this is safe.
-                    // We might want to refresh the map if connections changed, which "Fragmented Memory" does.
-                    if(cardDef.id === "AWK002") _updateAndRenderNodeMap(); // Re-render if map connections changed
+                    // After attempting to process an awakening card, ensure we are on map view.
+                    // This might be redundant if already there, but safe.
+                    switchToNodeMapView(); 
                     return; 
                 }
+                 // If no awakening cards in hand, it's "contemplated" for the awakening sequence.
+                uiMgr.addLogEntry(`You've processed all current insights from ${node.name}.`, "system");
+                switchToNodeMapView();
+                return;
             }
-            // End of new logic for Shattered Shore Awakening cards
 
             if (node.isSanctuary && node.locationDetails) { 
                 _switchToView('location-view'); 
@@ -206,13 +214,11 @@ const Game = (() => {
                 storyletToStartId = node.storyletOnArrival;
             } else if (node.locationDetails && node.locationDetails.storyletsOnExplore && node.locationDetails.storyletsOnExplore.length > 0) {
                 storyletToStartId = node.locationDetails.storyletsOnExplore[0]; 
-            } else if (node.storyletOnArrival && node.arrivalStoryletCompleted && node.id !== "NODE_SHATTERED_SHORE") { 
-                // Don't show this for Shattered Shore if Awakening cards are being processed
+            } else if (node.storyletOnArrival && node.arrivalStoryletCompleted) { 
                  uiMgr.addLogEntry(`You've already contemplated the essence of ${node.name}.`, "system");
                  switchToNodeMapView(); 
                  return;
             }
-
 
             if (storyletToStartId && STORYLET_DATA_MINIMAL[storyletToStartId]) { 
                 _switchToView('storylet-view'); 
@@ -288,7 +294,7 @@ const Game = (() => {
         if (encounterMgr.startEncounter(aspectIdToStart, previousViewBeforeStorylet)) {} 
         else { 
             uiMgr.addLogEntry(`Failed to start queued encounter: ${aspectIdToStart}`, "error"); 
-            storyletEnded(); // Recover
+            storyletEnded(); 
         } 
     }
 
@@ -342,7 +348,9 @@ const Game = (() => {
     
     function playerRecalledName() { 
         _updateHeaderInfo(false); 
-        // refreshPlayerUI(); // This is likely redundant if the card effect modified stats which then trigger refreshPlayerUI via their setters or at end of effect block
+        // refreshPlayerUI(); // Not strictly needed if effect only changes name, but good for consistency if stats also changed.
+                           // The "Echo of a Name" card *does* change stats, so refresh is good.
+        refreshPlayerUI();
     } 
     
     function refreshPlayerUI() { 
@@ -355,7 +363,6 @@ const Game = (() => {
     function _checkGameOver() { 
         if (isGameOver) return true; 
         if (currentPlayer.integrity <= 0) { 
-            // triggerGameOver is called by player.modifyIntegrity when integrity hits 0
             return true; 
         } 
         return false; 
@@ -426,13 +433,13 @@ const Game = (() => {
             storyChoicesContainer.addEventListener('click', (event) => { 
                 const storyletViewEl = uiMgr.getDOMElement('storyletView');
                 if (currentViewId !== 'storylet-view' || (storyletViewEl && storyletViewEl.classList.contains('view-hidden'))) {
-                    console.warn("Storylet choice click ignored: Storylet view not active/visible."); 
+                    // console.warn("Storylet choice click ignored: Storylet view not active/visible."); 
                     return; 
                 }
                 if (event.target.tagName === 'BUTTON' && event.target.dataset.choiceIndex && !encounterMgr.isActive()) {
                     const button = event.target; 
                     if(button.disabled) { 
-                        console.warn("Clicked on a disabled storylet choice button."); 
+                        // console.warn("Clicked on a disabled storylet choice button."); 
                         return; 
                     }
                     const allChoiceButtons = storyChoicesContainer.querySelectorAll('button');

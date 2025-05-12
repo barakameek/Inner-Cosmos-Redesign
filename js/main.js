@@ -3,10 +3,10 @@
 const Game = (() => {
 
     let currentPlayer = null;
-    let currentWorld = World;    
-    let uiMgr = UIManager;      
-    let storyletMgr = StoryletManager; 
-    let encounterMgr = EncounterManager; 
+    let currentWorld = null; 
+    let uiMgr = null;      
+    let storyletMgr = null; 
+    let encounterMgr = null; 
 
     let currentViewId = 'pre-game-intro-view';
     let isGameOver = false;
@@ -15,9 +15,16 @@ const Game = (() => {
     let currentMapNodeId = null; 
 
     function init() {
-        console.log("Sunless Psyche Main (v2.1 Awakening - Full Final): Initializing...");
+        console.log("Sunless Psyche Main (v2.1 Awakening - Final Full Corrected): Initializing...");
         isGameOver = false;
         preGameIntroActive = true;
+
+        // Assign module shortcuts AFTER they are defined globally by their respective IIFEs
+        // This depends on script load order in index.html
+        uiMgr = UIManager;    
+        currentWorld = World; 
+        storyletMgr = StoryletManager; 
+        encounterMgr = EncounterManager; 
 
         uiMgr.init(); 
         currentPlayer = new Player();
@@ -28,12 +35,12 @@ const Game = (() => {
         _setupGlobalEventListeners();
         _startGameSequence();
 
-        console.log("Sunless Psyche Main (v2.1 Awakening - Full Final): Initialization complete.");
+        console.log("Sunless Psyche Main (v2.1 Awakening - Final Full Corrected): Initialization complete.");
     }
 
     function _startGameSequence() {
         currentMapNodeId = null; 
-        refreshPlayerUI();
+        refreshPlayerUI(); // Update with initial low stats from Player constructor
         _updateHeaderInfo(true); 
         uiMgr.startPreGameIntro(); 
     }
@@ -51,7 +58,7 @@ const Game = (() => {
     }
     
     function _switchToView(viewId) {
-        console.log(`Main: Switching view to: ${viewId}`);
+        // console.log(`Main: Switching view to: ${viewId}`); // Can be noisy, enable for debug
         currentViewId = viewId; 
         uiMgr._showViewActualDOM(viewId); 
         
@@ -67,6 +74,17 @@ const Game = (() => {
             const accessibleNodeIds = currentWorld.getAccessibleNodeIds(currentMapNodeId); 
             uiMgr.renderNodeMap(allNodes, currentMapNodeId, accessibleNodeIds);
             uiMgr.updateCurrentNodeInfo(currentNodeData);
+            // Update reflect insights button based on hand
+            const reflectBtn = uiMgr.getDOMElement('reflectInsightsButton');
+            if(reflectBtn) {
+                const hasPlayableInsight = currentPlayer.hand.some(cardId => {
+                    const cardDef = CONCEPT_CARD_DEFINITIONS[cardId];
+                    return cardDef && cardDef.type === "Insight" && (cardId === "AWK002" || cardId === "AWK003" || cardId === "AWK004"); // Example condition
+                });
+                if(hasPlayableInsight) reflectBtn.classList.remove('view-hidden');
+                else reflectBtn.classList.add('view-hidden');
+            }
+
         } else {
             const mapContainer = uiMgr.getDOMElement('nodeMapContainer');
             if(mapContainer) mapContainer.innerHTML = `<p class="placeholder">The way is obscured by swirling nothingness...</p>`;
@@ -89,8 +107,9 @@ const Game = (() => {
         } else {
             const currentNode = currentWorld.getNodeData(currentMapNodeId);
             if (currentViewId === 'location-view' && currentNode && currentNode.isSanctuary) {
+                // If storylet ended in a location view (e.g. talking to keeper), re-display location
+                _switchToView('location-view'); 
                 uiMgr.displayLocation(currentNode.locationDetails || currentNode); 
-                 _switchToView('location-view'); 
             } else {
                  switchToNodeMapView(); 
             }
@@ -106,9 +125,9 @@ const Game = (() => {
         const startingNode = currentWorld.placePlayerAtNode("NODE_SHATTERED_SHORE");
         if (startingNode) {
             currentMapNodeId = startingNode.id; 
-            uiMgr.addLogEntry("Consciousness coalesces... You are on The Shattered Shore.", "system_major_event");
+            notify("Consciousness coalesces... You are on The Shattered Shore.", "system_major_event");
             
-            console.log("Player hand JUST BEFORE STORY_SHORE_ARRIVAL storylet is started (in main.js):", JSON.stringify(currentPlayer.hand));
+            // console.log("Player hand JUST BEFORE STORY_SHORE_ARRIVAL storylet is started (in main.js):", JSON.stringify(currentPlayer.hand));
 
             if (startingNode.storyletOnArrival) {
                 _switchToView('storylet-view'); 
@@ -125,7 +144,7 @@ const Game = (() => {
             }
         } else {
             console.error("CRITICAL: Failed to place player at NODE_SHATTERED_SHORE!");
-            uiMgr.addLogEntry("The void remains absolute. (Error: Start node missing)", "critical_system");
+            notify("The void remains absolute. (Error: Start node missing)", "critical_system");
         }
     }
 
@@ -137,6 +156,7 @@ const Game = (() => {
             refreshPlayerUI(); 
             
             let storyletToStart = null;
+            // Only trigger arrival storylet if it hasn't been completed
             if (!newNodeData.arrivalStoryletCompleted && newNodeData.storyletOnArrival) {
                 storyletToStart = newNodeData.storyletOnArrival;
             }
@@ -147,7 +167,7 @@ const Game = (() => {
                 if(storyletInstance) uiMgr.displayStorylet(storyletInstance); 
                 else switchToNodeMapView(); 
             } else { 
-                switchToNodeMapView(); 
+                switchToNodeMapView(); // No new arrival storylet, just show the map at new location
             } 
         } 
         _checkGameOver(); 
@@ -157,7 +177,7 @@ const Game = (() => {
         if (isGameOver || encounterMgr.isActive() || !currentMapNodeId) return; 
         const node = currentWorld.getNodeData(currentMapNodeId); 
         if (node) { 
-            uiMgr.addLogEntry(`Delving into ${node.name}...`, "action"); 
+            notify(`Delving into ${node.name}...`, "action"); 
 
             if (node.id === "NODE_SHATTERED_SHORE" && node.arrivalStoryletCompleted) {
                 let awakeningCardIdToPlay = null;
@@ -167,7 +187,7 @@ const Game = (() => {
 
                 if (awakeningCardIdToPlay) {
                     const cardDef = CONCEPT_CARD_DEFINITIONS[awakeningCardIdToPlay];
-                    uiMgr.addLogEntry(`You focus on the lingering insight: "${cardDef.name}"...`, "player_action_major");
+                    notify(`You focus on the lingering insight: "${cardDef.name}"...`, "player_action_major");
 
                     if (currentPlayer.spendFocusForCard(cardDef.cost, cardDef.name)) {
                         currentPlayer.playCardFromHand(cardDef.id); 
@@ -176,7 +196,7 @@ const Game = (() => {
                             effectFn(cardDef); 
                         } else {
                             console.error(`No effect function found for ${cardDef.effectFunctionName}`);
-                            uiMgr.addLogEntry(`The insight of "${cardDef.name}" remains elusive.`, "warning");
+                            notify(`The insight of "${cardDef.name}" remains elusive.`, "warning");
                         }
                         refreshPlayerUI(); 
 
@@ -184,18 +204,18 @@ const Game = (() => {
                             const nextAwakeningCardId = currentPlayer.drawFromAwakeningDeck();
                             if (nextAwakeningCardId) {
                                 refreshPlayerUI(); 
-                                uiMgr.addLogEntry("Another fragmented thought surfaces...", "discovery");
-                                uiMgr.addLogEntry(`Hint: Consider exploring "${node.name}" again to process new insights.`, "tutorial_hint");
+                                notify("Another fragmented thought surfaces...", "discovery");
+                                notify(`Hint: Consider exploring "${node.name}" again to process new insights.`, "tutorial_hint");
                             }
                         } else if (currentPlayer.awakeningDeck.length === 0 && !currentPlayer.hand.some(id => id.startsWith("AWK"))) {
-                            uiMgr.addLogEntry("The initial flood of fractured insights subsides. The way forward is slightly clearer.", "system_positive_strong");
+                            notify("The initial flood of fractured insights subsides. The way forward is slightly clearer.", "system_positive_strong");
                             if(currentViewId === 'map-view') _updateAndRenderNodeMap();
                         }
                     }
                     if (currentViewId !== 'map-view') switchToNodeMapView(); 
                     return; 
                 }
-                uiMgr.addLogEntry(`You've processed all current insights from ${node.name}.`, "system");
+                notify(`You've processed all current insights from ${node.name}.`, "system");
                 switchToNodeMapView();
                 return;
             }
@@ -212,7 +232,7 @@ const Game = (() => {
             } else if (node.locationDetails && node.locationDetails.storyletsOnExplore && node.locationDetails.storyletsOnExplore.length > 0) {
                 storyletToStartId = node.locationDetails.storyletsOnExplore[0]; 
             } else if (node.storyletOnArrival && node.arrivalStoryletCompleted && node.id !== "NODE_SHATTERED_SHORE") { 
-                 uiMgr.addLogEntry(`You've already contemplated the essence of ${node.name}.`, "system");
+                 notify(`You've already contemplated the essence of ${node.name}.`, "system");
                  switchToNodeMapView(); 
                  return;
             }
@@ -224,7 +244,7 @@ const Game = (() => {
                 else switchToNodeMapView(); 
             } else { 
                 if (!(node.id === "NODE_SHATTERED_SHORE" && node.arrivalStoryletCompleted)) { 
-                    uiMgr.addLogEntry("There's nothing more of immediate note here to explore via storylet.", "system"); 
+                    notify("There's nothing more of immediate note here to explore via storylet.", "system"); 
                 }
                 switchToNodeMapView();
             } 
@@ -235,19 +255,20 @@ const Game = (() => {
         if (isGameOver || encounterMgr.isActive()) return; 
         const locationNode = currentWorld.getNodeData(currentMapNodeId); 
         if (!locationNode || !locationNode.isSanctuary || !locationNode.locationDetails) { 
-             uiMgr.addLogEntry("No specific location actions here.", "warning"); 
+             notify("No specific location actions here.", "warning"); 
              return; 
         } 
-        uiMgr.addLogEntry(`Location action: ${actionId}`, "action"); 
+        notify(`Location action: ${actionId}`, "action"); 
         switch (actionId) { 
             case 'rest': 
                 currentPlayer.modifyIntegrity(Math.min(20, currentPlayer.maxIntegrity - currentPlayer.integrity), "Sanctuary rest"); 
                 currentPlayer.modifyHope(1, "Sanctuary rest"); 
                 currentPlayer.modifyDespair(-1, "Sanctuary rest"); 
-                uiMgr.addLogEntry("You rest. A fragile peace settles.", "system_positive"); 
+                currentPlayer.modifyClarity(2, "Sanctuary respite"); // Added Clarity on rest
+                notify("You rest within the Sanctum. A fragile peace settles, and your mind clears somewhat.", "system_positive_strong"); 
                 break; 
             case 'shop_intro': 
-                uiMgr.addLogEntry("The Keeper offers basic Concepts for Insight. (Shop not yet implemented).", "dialogue"); 
+                notify("The Keeper offers basic Concepts for Insight. (Shop not yet implemented).", "dialogue"); 
                 break; 
             case 'talk_keeper': 
                 const keeperStoryletId = locationNode.locationDetails.storyletsOnExplore?.[0]; 
@@ -257,15 +278,15 @@ const Game = (() => {
                     if(storyletInstance) uiMgr.displayStorylet(storyletInstance); 
                     else switchToNodeMapView(); 
                 } else { 
-                    uiMgr.addLogEntry("The Keeper merely observes.", "system"); 
+                    notify("The Keeper merely observes.", "system"); 
                 } 
                 break; 
             case 'view_ambition': 
-                uiMgr.addLogEntry(`Your current Ambition: ${currentPlayer.ambition}`, "system"); 
-                uiMgr.addJournalEntry("Ambition Focused", `I contemplate: "${currentPlayer.ambition}".`); 
+                notify(`Your current Ambition: ${currentPlayer.ambition}`, "system"); 
+                addJournalEntry("Ambition Focused", `I contemplate my Ambition: "${currentPlayer.ambition}".`); 
                 break; 
             default: 
-                uiMgr.addLogEntry(`Action "${actionId}" unknown here.`, "warning"); 
+                notify(`Action "${actionId}" unknown here.`, "warning"); 
                 break; 
         } 
         refreshPlayerUI(); 
@@ -290,7 +311,7 @@ const Game = (() => {
         _switchToView('encounter-view'); 
         if (encounterMgr.startEncounter(aspectIdToStart, previousViewBeforeStorylet)) {} 
         else { 
-            uiMgr.addLogEntry(`Failed to start queued encounter: ${aspectIdToStart}`, "error"); 
+            notify(`Failed to start queued encounter: ${aspectIdToStart}`, "error"); 
             storyletEnded(); 
         } 
     }
@@ -340,7 +361,7 @@ const Game = (() => {
         currentWorld.revealNodeConnection("NODE_SHATTERED_SHORE", "NODE_WRECKAGE_OF_THOUGHT"); 
         currentWorld.revealNodeConnection("NODE_SHATTERED_SHORE", "NODE_WEEPING_NICHE"); 
         if (currentViewId === 'map-view') _updateAndRenderNodeMap(); 
-        uiMgr.addJournalEntry("Paths Unveiled", "The vision from 'The Fall' revealed new pathways from the Shattered Shore."); 
+        addJournalEntry("Paths Unveiled", "The vision from 'The Fall' revealed new pathways from the Shattered Shore."); 
     }
     
     function playerRecalledName() { 
@@ -349,10 +370,10 @@ const Game = (() => {
     } 
     
     function refreshPlayerUI() { 
-        uiMgr.updatePlayerStats(currentPlayer.getUIData()); 
-        uiMgr.updatePlayerHand(currentPlayer.getHandCardDefinitions()); 
-        uiMgr.updateDeckInfo(currentPlayer.deck.length, currentPlayer.hand.length, currentPlayer.discardPile.length, currentPlayer.getTraumaCountInPlay()); 
-        uiMgr.updateActiveMemories(currentPlayer.memories); 
+        uiMgr.updateDashboardVitals(currentPlayer.getUIData()); // UPDATED to new UIManager function
+        // Hand for encounter is updated by EncounterManager. For map reflection, use a modal.
+        // uiMgr.updateDeckInfo in UIManager no longer exists, that info is in modals.
+        // For now, we don't have a persistent deck/hand display outside of modals/encounter.
     }
 
     function _checkGameOver() { 
@@ -367,15 +388,15 @@ const Game = (() => {
         if (isGameOver) return; 
         isGameOver = true; 
         uiMgr.displayGameOver(title, message); 
-        uiMgr.addLogEntry(`GAME OVER: ${title}`, "critical_system"); 
+        notify(`GAME OVER: ${title}`, "critical_system"); 
     }
 
     function triggerMentalFogEffects() { 
-        uiMgr.addLogEntry("The Mental Fog thickens, treacherous and sluggish.", "world_event_negative"); 
+        notify("The Mental Fog thickens, treacherous and sluggish.", "world_event_negative"); 
     }
 
     function triggerCriticalDespairEffects() { 
-        uiMgr.addLogEntry("Overwhelming Despair attracts Nightmares and distorts perception!", "world_event_critical"); 
+        notify("Overwhelming Despair attracts Nightmares and distorts perception!", "world_event_critical"); 
     }
 
     function restartGame() { 
@@ -388,11 +409,31 @@ const Game = (() => {
         currentPlayer.resetForNewRun(); 
         currentWorld.resetWorld(); 
         _startGameSequence(); 
-        const logEntriesEl = uiMgr.getDOMElement('logEntries'); 
-        if(logEntriesEl) logEntriesEl.innerHTML = ''; 
-        const journalEntriesEl = uiMgr.getDOMElement('journalEntries'); 
+        const logEntriesEl = uiMgr.getDOMElement('eventLogNotificationsContainer'); // Target new container
+        if(logEntriesEl) logEntriesEl.innerHTML = ''; // Clear old notifications
+        const journalEntriesEl = uiMgr.getDOMElement('journalEntriesModal'); // Target modal journal
         if(journalEntriesEl) journalEntriesEl.innerHTML = `<p class="journal-entry placeholder">The pages are blank, aching for input...</p>`; 
-        uiMgr.addLogEntry("A new cycle of consciousness begins...", "system_major_event"); 
+        notify("A new cycle of consciousness begins...", "system_major_event"); 
+    }
+
+    // --- UI Event Log Proxy & Journal ---
+    function notify(message, type = "normal") {
+        // This function will now be the primary way game logic sends messages to the player
+        // It uses the UIManager's new notification system
+        if (uiMgr && uiMgr.addEventLogNotification) {
+            uiMgr.addEventLogNotification(message, type);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`); // Fallback if UIManager or function is missing
+        }
+    }
+    function addJournalEntry(title, text) {
+        // This can be called by various game events to add to the persistent journal
+        // The UIManager will handle displaying it in the journal modal.
+        if (uiMgr && uiMgr.addJournalEntry) { // Check if UIManager itself is loaded
+            uiMgr.addJournalEntry(title, text); // UIManager.addJournalEntry is for the *data* part
+        }
+        // We also want a notification that a journal entry was added.
+        notify(`Journal Updated: "${title}"`, "discovery");
     }
     
     function _setupGlobalEventListeners() {
@@ -412,7 +453,61 @@ const Game = (() => {
         const exploreBtn = uiMgr.getDOMElement('exploreCurrentNodeButton'); 
         if (exploreBtn) exploreBtn.addEventListener('click', _exploreCurrentNode);
 
-        const locActionsContainer = uiMgr.getDOMElement('locationActions'); 
+        // Reflect Insights button on map
+        const reflectBtn = uiMgr.getDOMElement('reflectInsightsButton');
+        if (reflectBtn) {
+            reflectBtn.addEventListener('click', () => {
+                if (encounterMgr.isActive() || preGameIntroActive) return;
+                const playableInsights = currentPlayer.hand.filter(cardId => {
+                    const cardDef = CONCEPT_CARD_DEFINITIONS[cardId];
+                    // Define which cards are playable insights outside combat (e.g., AWK002, AWK003, AWK004)
+                    return cardDef && cardDef.type === "Insight" || (cardDef && cardDef.id.startsWith("AWK") && cardDef.id !== "AWK001");
+                }).map(cardId => CONCEPT_CARD_DEFINITIONS[cardId]);
+
+                if (playableInsights.length > 0) {
+                    uiMgr.displayReflectInsightsModal(playableInsights);
+                } else {
+                    notify("No pressing insights to reflect upon from your current hand.", "system");
+                }
+            });
+        }
+        // Event listener for dynamically created buttons in Reflect Insights Modal
+        const playableInsightsListEl = uiMgr.getDOMElement('playableInsightsList');
+        if(playableInsightsListEl){
+            playableInsightsListEl.addEventListener('click', (event) => {
+                const cardButton = event.target.closest('button');
+                if(cardButton && cardButton.dataset.cardId) {
+                    const cardId = cardButton.dataset.cardId;
+                    const cardDef = CONCEPT_CARD_DEFINITIONS[cardId];
+                    uiMgr.hideModals(); // Close modal first
+                    notify(`You focus on the insight: "${cardDef.name}"...`, "player_action_major");
+                    if (currentPlayer.spendFocusForCard(cardDef.cost, cardDef.name)) {
+                        currentPlayer.playCardFromHand(cardDef.id);
+                        const effectFn = EncounterManager.getConceptCardEffectFunction(cardDef.effectFunctionName);
+                        if (effectFn) { effectFn(cardDef); }
+                        else { console.error(`No effect function for ${cardDef.effectFunctionName}`); }
+                        refreshPlayerUI();
+                        // Check if more awakening cards need to be drawn
+                        if (currentPlayer.awakeningDeck.length > 0 && cardDef.id.startsWith("AWK")) {
+                           const nextAwakeningCardId = currentPlayer.drawFromAwakeningDeck();
+                            if (nextAwakeningCardId) {
+                                refreshPlayerUI(); 
+                                notify("Another fragmented thought surfaces...", "discovery");
+                            }
+                        } else if (currentPlayer.awakeningDeck.length === 0 && !currentPlayer.hand.some(id => id.startsWith("AWK"))) {
+                             notify("The initial flood of fractured insights subsides.", "system_positive_strong");
+                             if(currentViewId === 'map-view') _updateAndRenderNodeMap(); // Update reflect button visibility
+                        }
+
+                    } else {
+                        notify(`Not enough Focus to process "${cardDef.name}".`, "warning");
+                    }
+                }
+            });
+        }
+
+
+        const locActionsContainer = uiMgr.getDOMElement('locationActionsMain'); 
         if (locActionsContainer) {
             locActionsContainer.addEventListener('click', (event) => { 
                 if (event.target.tagName === 'BUTTON' && event.target.dataset.action && !encounterMgr.isActive()) {
@@ -420,26 +515,21 @@ const Game = (() => {
                 }
             });
         }
-        const returnToMapBtn = uiMgr.getDOMElement('returnToMapFromLocationButton'); 
+        const returnToMapBtn = uiMgr.getDOMElement('returnToMapFromLocationMainButton'); 
          if(returnToMapBtn) returnToMapBtn.addEventListener('click', _handleReturnToMapFromLocation);
 
-        const storyChoicesContainer = uiMgr.getDOMElement('storyletChoices'); 
+        const storyChoicesContainer = uiMgr.getDOMElement('storyletChoicesMain'); 
         if (storyChoicesContainer) {
             storyChoicesContainer.addEventListener('click', (event) => { 
                 const storyletViewEl = uiMgr.getDOMElement('storyletView');
                 if (currentViewId !== 'storylet-view' || (storyletViewEl && storyletViewEl.classList.contains('view-hidden'))) {
-                    // console.warn("Storylet choice click ignored: Storylet view not active/visible."); 
                     return; 
                 }
                 if (event.target.tagName === 'BUTTON' && event.target.dataset.choiceIndex && !encounterMgr.isActive()) {
                     const button = event.target; 
-                    if(button.disabled) { 
-                        // console.warn("Clicked on a disabled storylet choice button."); 
-                        return; 
-                    }
+                    if(button.disabled) { return; }
                     const allChoiceButtons = storyChoicesContainer.querySelectorAll('button');
                     allChoiceButtons.forEach(btn => btn.disabled = true);
-                    
                     _handleStoryletChoice(parseInt(event.target.dataset.choiceIndex)); 
                 }
             });
@@ -451,7 +541,7 @@ const Game = (() => {
         const revealTraitBtnEnc = uiMgr.getDOMElement('revealTraitEncounterButton'); 
         if (revealTraitBtnEnc) revealTraitBtnEnc.addEventListener('click', _handleEncounterRevealTrait);
 
-        const playerHandElemEnc = uiMgr.getDOMElement('playerHandCards');  
+        const playerHandElemEnc = uiMgr.getDOMElement('playerHandEncounterOverlay');  
         if (playerHandElemEnc) {  
             playerHandElemEnc.addEventListener('click', (event) => { 
                 const cardElement = event.target.closest('.encounter-card-placeholder'); 
@@ -470,33 +560,62 @@ const Game = (() => {
             playerHandElemEnc.addEventListener('mousemove', (event) => uiMgr.moveTooltip(event));  
         } 
         
-        const viewDeckBtn = uiMgr.getDOMElement('viewDeckButton'); 
-        if (viewDeckBtn) viewDeckBtn.addEventListener('click', () => uiMgr.displayFullDeck(currentPlayer.getFullDeckCardDefinitions()));
-        
-        const modalOverlay = uiMgr.getDOMElement('modalOverlay'); 
+        // Dashboard Buttons
+        const journalBtn = uiMgr.getDOMElement('dashboardJournalButton');
+        if(journalBtn) journalBtn.addEventListener('click', () => {
+            // Assuming journal entries are stored somewhere accessible, e.g., Game.getJournalEntries()
+            // For now, let's imagine a simple array of strings or {title, text} objects in Game or Player
+            const entries = currentPlayer.journalEntries || [{title:"First Entry", text:"The pages are worn, details indistinct..."}]; // Placeholder
+            uiMgr.displayJournalModal(entries);
+        });
+        const statusBtn = uiMgr.getDOMElement('dashboardStatusButton');
+        if(statusBtn) statusBtn.addEventListener('click', () => {
+            uiMgr.updateStatusModal(currentPlayer.getUIData()); // Pass all player data
+            uiMgr.showModal('status-modal'); // UIManager method to show the specific modal by ID
+        });
+        const conceptsBtn = uiMgr.getDOMElement('dashboardConceptsButton');
+        if(conceptsBtn) conceptsBtn.addEventListener('click', () => {
+            const deckInfo = {
+                deck: currentPlayer.deck.length,
+                hand: currentPlayer.hand.length,
+                discard: currentPlayer.discardPile.length,
+                traumas: currentPlayer.getTraumaCountInPlay()
+            };
+            uiMgr.displayConceptsModal(deckInfo, currentPlayer.getFullDeckCardDefinitions());
+        });
+
+        // Modal Close Buttons (using event delegation on the overlay)
+        const modalOverlay = uiMgr.getDOMElement('modalOverlayFullscreen'); 
         if (modalOverlay) {
             modalOverlay.addEventListener('click', (event) => { 
-                if (event.target.classList.contains('close-modal-button') || event.target === modalOverlay) {
+                if (event.target.classList.contains('close-fullscreen-modal-button') || event.target === modalOverlay) { // Click on X or outside content
                     uiMgr.hideModals(); 
                 }
             });
         }
-        const restartBtnModal = uiMgr.getDOMElement('restartGameButton'); 
+        const restartBtnModal = uiMgr.getDOMElement('restartGameModalButton'); 
         if (restartBtnModal) restartBtnModal.addEventListener('click', restartGame);
         
-        const addJournalBtn = uiMgr.getDOMElement('addJournalEntryButton'); 
-        if(addJournalBtn) {
-            addJournalBtn.addEventListener('click', () => { 
+        const addJournalBtnModal = uiMgr.getDOMElement('addJournalEntryModalButton'); 
+        if(addJournalBtnModal) {
+            addJournalBtnModal.addEventListener('click', () => { 
                 const note = prompt("Personal Note (max 100 chars):"); 
                 if (note && note.trim() !== "") {
-                    uiMgr.addJournalEntry("Personal Note", note.trim().substring(0, 100)); 
+                    // This should add to a player's journal data structure, then refresh the modal view.
+                    // For now, just a UIManager call:
+                    addJournalEntry("Personal Note", note.trim().substring(0, 100)); // Game.addJournalEntry now uses notify
+                    // To refresh the modal if it's open:
+                    if(!uiMgr.getDOMElement('journalModal').classList.contains('view-hidden')){
+                        const entries = currentPlayer.journalEntries || [{title:"First Entry", text:"The pages are worn, details indistinct..."}];
+                        uiMgr.displayJournalModal(entries); // Re-display with new entry
+                    }
                 }
             });
         }
         
         document.addEventListener('keydown', (event) => { 
             if (event.key === 'Escape') { 
-                const modalOverlayEl = uiMgr.getDOMElement('modalOverlay');
+                const modalOverlayEl = uiMgr.getDOMElement('modalOverlayFullscreen');
                 if (modalOverlayEl && !modalOverlayEl.classList.contains('view-hidden')) {
                     uiMgr.hideModals(); 
                 }
@@ -512,30 +631,12 @@ const Game = (() => {
         refreshPlayerUI, 
         switchToNodeMapView, 
         triggerMentalFogEffects, triggerCriticalDespairEffects, 
-        handleTraumaOnDraw: (cardId, onDrawFunctionName) => {
-            if (encounterMgr.isActive()) {
-                const effectFn = EncounterManager.getConceptCardEffectFunction(onDrawFunctionName);
-                if (effectFn && typeof effectFn === 'function') {
-                    effectFn(CONCEPT_CARD_DEFINITIONS[cardId]); 
-                    refreshPlayerUI(); 
-                } else {
-                    console.warn(`onDraw function ${onDrawFunctionName} for ${cardId} not found in EncounterManager.`);
-                    if (cardId === "TRM001" && encounterMgr.canSpendClarityForDisorientation && encounterMgr.canSpendClarityForDisorientation()) {
-                        if (confirm("Disorientation clouds your thoughts, making Concepts cost +1 Focus this turn.\nSpend 1 Clarity to clear this effect for the turn?")) {
-                            if(encounterMgr.spendClarityForDisorientation) encounterMgr.spendClarityForDisorientation();
-                            refreshPlayerUI();
-                        } else {
-                            UIManager.addLogEntry("You endure Disorientation's effects this turn.", "player_action_negative");
-                        }
-                    }
-                }
-            } else {
-                UIManager.addLogEntry(`Drew ${CONCEPT_CARD_DEFINITIONS[cardId]?.name} (Trauma) outside of encounter - effect not applied now.`, "system_warning");
-            }
-        },
+        handleTraumaOnDraw: (cardId, onDrawFunctionName) => { /* ... (Identical to previous full main.js) ... */ if (encounterMgr.isActive()) { const effectFn = EncounterManager.getConceptCardEffectFunction(onDrawFunctionName); if (effectFn && typeof effectFn === 'function') { effectFn(CONCEPT_CARD_DEFINITIONS[cardId]); refreshPlayerUI(); } else { console.warn(`onDraw function ${onDrawFunctionName} for ${cardId} not found in EncounterManager.`); if (cardId === "TRM001" && encounterMgr.canSpendClarityForDisorientation && encounterMgr.canSpendClarityForDisorientation()) { if (confirm("Disorientation clouds your thoughts, making Concepts cost +1 Focus this turn.\nSpend 1 Clarity to clear this effect for the turn?")) { if(encounterMgr.spendClarityForDisorientation) encounterMgr.spendClarityForDisorientation(); refreshPlayerUI(); } else { notify("You endure Disorientation's effects this turn.", "player_action_negative"); } } } } else { notify(`Drew ${CONCEPT_CARD_DEFINITIONS[cardId]?.name} (Trauma) outside of encounter - effect not applied now.`, "system_warning"); } },
         getCurrentPlayer: () => currentPlayer, 
-        setPlayerTempFlag: (flagName, value) => { if (currentPlayer) { currentPlayer[flagName] = value; console.log(`Player flag set by Game: ${flagName} = ${value}`); } },
-        getPlayerTempFlag: (flagName) => { return currentPlayer ? currentPlayer[flagName] : undefined; }
+        setPlayerTempFlag: (flagName, value) => { if (currentPlayer) { currentPlayer[flagName] = value; /* console.log(`Player flag set by Game: ${flagName} = ${value}`); */ } }, // Quieter log
+        getPlayerTempFlag: (flagName) => { return currentPlayer ? currentPlayer[flagName] : undefined; },
+        notify, // Expose the notify function
+        addJournalEntry, // Expose for storylet outcomes etc.
     };
 })();
 

@@ -3,219 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sunless Psyche: Awakening (v2.1 - Full Rewrite)</title>
+    <title>Sunless Psyche: Awakening (v3 - Immersive UI)</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- Consider adding a thematic font from Google Fonts, e.g., Cormorant Garamond or Cinzel -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="game-wrapper">
+    <div id="game-viewport"> <!-- Overall container for the game area -->
 
-        <!-- Header / Meta Information Area -->
-        <header id="game-header">
-            <h1>Sunless Psyche</h1>
-            <div id="psychonaut-name-display">Psychonaut: <span class="value">The Unknowing</span></div>
-            <div id="current-ambition-display">Ambition: <span class="value">To Simply Be</span></div>
-        </header>
+        <!-- Main Interaction Area / The "Stage" -->
+        <main id="main-stage">
+            <div id="pre-game-intro-view" class="stage-view view-active">
+                <h2 id="pre-game-title">The Precipice</h2>
+                <div id="pre-game-text-area">
+                    <!-- Intro lines populated by JS -->
+                </div>
+                <button id="continue-from-precipice" class="view-hidden">Grasp for Awareness...</button>
+            </div>
 
-        <!-- Main Game Area -->
-        <main id="main-content-area">
-
-            <!-- Left Panel: Player Stats & Status -->
-            <aside id="player-status-panel">
-                <h2>Psychonaut Status</h2>
-                <div class="stat-block">
-                    <label>Integrity:</label>
-                    <div class="bar-container">
-                        <div id="player-integrity-bar" class="bar integrity"></div>
-                    </div>
-                    <span id="player-integrity-value" class="value">10/10</span>
-                </div>
-                <div class="stat-block">
-                    <label>Focus:</label>
-                    <div class="bar-container">
-                        <div id="player-focus-bar" class="bar focus"></div>
-                    </div>
-                    <span id="player-focus-value" class="value">1/1</span>
-                </div>
-                <div class="stat-block">
-                    <label>Clarity:</label>
-                    <div class="bar-container">
-                        <div id="player-clarity-bar" class="bar clarity"></div>
-                    </div>
-                    <span id="player-clarity-value" class="value">1/20</span>
-                </div>
-                <div class="stat-block">
-                    <label>Hope:</label>
-                    <div class="bar-container">
-                        <div id="player-hope-bar" class="bar hope"></div>
-                    </div>
-                    <span id="player-hope-value" class="value">0/10</span>
-                </div>
-                <div class="stat-block">
-                    <label>Despair:</label>
-                    <div class="bar-container">
-                        <div id="player-despair-bar" class="bar despair"></div>
-                    </div>
-                    <span id="player-despair-value" class="value">7/10</span>
-                </div>
-
-                <div id="attunements-display">
-                    <h3>Attunements</h3>
-                    <ul>
-                        <li>Attraction (A): <span id="attunement-a" class="value">0</span></li>
-                        <li>Interaction (I): <span id="attunement-i" class="value">0</span></li>
-                        <li>Sensory (S): <span id="attunement-s" class="value">0</span></li>
-                        <li>Psychological (P): <span id="attunement-p" class="value">0</span></li>
-                        <li>Cognitive (C): <span id="attunement-c" class="value">0</span></li>
-                        <li>Relational (R): <span id="attunement-r" class="value">0</span></li>
-                        <li>RoleFocus (RF): <span id="attunement-rf" class="value">0</span></li>
-                    </ul>
-                </div>
-
-                <div id="memories-display">
-                    <h3>Active Memories (Artifacts)</h3>
-                    <ul id="active-memories-list">
-                        <li><span class="placeholder">No memories stir...</span></li>
-                    </ul>
-                </div>
-            </aside>
-
-            <!-- Center Panel: World Map / Location / Storylet / Encounter -->
-            <section id="world-interaction-panel">
-                <div id="pre-game-intro-view" class="view-active">
-                    <h2 id="pre-game-title">The Precipice</h2>
-                    <div id="pre-game-text-area">
-                        <!-- Intro lines will be populated by JS -->
-                    </div>
-                    <button id="continue-from-precipice" class="view-hidden">Grasp for Awareness...</button>
-                </div>
-
-                <div id="map-view" class="view-hidden">
+            <div id="map-view" class="stage-view view-hidden">
+                <div id="map-header">
                     <h2>The Inner Sea - <span id="current-node-map-name" class="value">The Shattered Shore</span></h2>
-                    <div id="node-map-container">
-                        <p class="placeholder">Visualizing connections...</p>
-                    </div>
+                </div>
+                <div id="node-map-container">
+                    <!-- Visual Node Map Rendered Here by JS -->
+                    <p class="placeholder">The way is obscured...</p>
+                </div>
+                <div id="map-node-interaction-panel">
                     <div id="map-node-info">
-                         <p>Current Location: <strong id="current-node-name-display">The Shattered Shore</strong></p>
-                         <p id="current-node-description-display">A desolate, rocky outcrop where consciousness frays.</p>
-                         <button id="explore-current-node-button">Explore This Place</button>
+                         <p>Current: <strong id="current-node-name-display">The Shattered Shore</strong></p>
+                         <p id="current-node-description-display">A desolate, rocky outcrop...</p>
+                    </div>
+                    <div id="map-node-actions">
+                        <button id="explore-current-node-button">Explore This Place</button>
+                        <button id="reflect-insights-button" class="view-hidden">Reflect on Insights</button>
                     </div>
                 </div>
+            </div>
 
-                <div id="location-view" class="view-hidden">
-                    <h2 id="location-name">Location Name</h2>
-                    <div id="location-description">
-                        <p>Description of the current location...</p>
-                    </div>
-                    <div id="location-actions">
-                        <h3>Actions:</h3>
-                        <!-- Populated by JS -->
-                        <button id="return-to-map-from-location">Return to Navigation</button>
-                    </div>
+            <div id="location-view" class="stage-view view-hidden">
+                <!-- Used for Sanctuaries or complex hub locations -->
+                <h2 id="location-name">Location Name</h2>
+                <div id="location-description-main">
+                    <!-- Main description here -->
                 </div>
-
-                <div id="storylet-view" class="view-hidden">
-                    <h2 id="storylet-title">Storylet Title</h2>
-                    <div id="storylet-text">
-                        <p>Narrative text of the storylet...</p>
-                    </div>
-                    <div id="storylet-choices">
-                        <h3>Choices:</h3>
-                        <!-- Populated by JS -->
-                    </div>
+                <div id="location-actions-main">
+                    <h3>Actions:</h3>
+                    <!-- Populated by JS -->
                 </div>
+                <button id="return-to-map-from-location-main">Return to Navigation</button>
+            </div>
 
-                <div id="encounter-view" class="view-hidden">
+            <div id="storylet-view" class="stage-view view-hidden">
+                <h2 id="storylet-title">Storylet Title</h2>
+                <div id="storylet-text-main">
+                    <!-- Narrative text here -->
+                </div>
+                <div id="storylet-choices-main">
+                    <h3>Choices:</h3>
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div id="encounter-view" class="stage-view view-hidden">
+                <div id="encounter-header">
                     <h2>Encounter: <span id="aspect-name-encounter">Aspect Name</span></h2>
-                    <div class="encounter-columns">
-                        <div class="encounter-aspect-info">
-                            <h3>Aspect Details</h3>
-                            <div>Resolve: <span id="aspect-resolve-encounter" class="value">X/Y</span></div>
-                            <div>Composure: <span id="aspect-composure-encounter" class="value">X</span></div>
-                            <div>Resonance: <span id="aspect-resonance-encounter" class="value">X/Y</span></div>
-                            <div>Dissonance: <span id="aspect-dissonance-encounter" class="value">X/Y</span></div>
-                            <div>Intent: <span id="aspect-intent-encounter" class="value">Aspect plans to...</span></div>
-                            <div>Traits: <ul id="aspect-traits-encounter"></ul></div>
-                        </div>
-                        <div class="encounter-player-info">
-                            <h3>Your Status</h3>
-                            <div>Focus: <span id="player-focus-encounter" class="value">X/Y</span></div>
-                            <div>Integrity: <span id="player-integrity-encounter" class="value">X/Y</span></div>
-                            <div>Active Stance: <span id="player-stance-encounter" class="value">None</span></div>
-                            <div>Player Composure: <span id="player-composure-encounter" class="value">0</span></div>
-                        </div>
-                    </div>
-                    <div id="player-hand-encounter">
-                        <h3>Hand (Concepts):</h3>
-                        <div id="player-hand-cards">
-                            <!-- Cards will be populated here -->
-                        </div>
-                    </div>
-                    <div id="encounter-controls">
-                        <button id="end-turn-encounter">End Turn</button>
-                        <button id="reveal-trait-encounter" title="Spend 1 Insight to reveal a hidden Trait">Reveal Trait (1 Insight)</button>
+                </div>
+                <div id="encounter-aspect-display">
+                    <!-- Simplified Aspect Info -->
+                    <div>Resolve: <span id="aspect-resolve-encounter">X/Y</span> | Composure: <span id="aspect-composure-encounter">X</span></div>
+                    <div>Resonance: <span id="aspect-resonance-encounter">X/Y</span> | Dissonance: <span id="aspect-dissonance-encounter">X/Y</span></div>
+                    <div class="intent-display">Intent: <span id="aspect-intent-encounter">Aspect plans...</span></div>
+                    <div id="aspect-traits-encounter-minimal">
+                        <!-- Key visible/revealed traits shown concisely -->
                     </div>
                 </div>
-            </section>
-
-            <!-- Right Panel: Deck Info / Log / Journal -->
-            <aside id="context-panel">
-                <div id="deck-info-display">
-                    <h3>Deck of Concepts</h3>
-                    <p>In Deck: <span id="deck-count-display" class="value">0</span></p>
-                    <p>In Hand: <span id="hand-count-display" class="value">0</span></p>
-                    <p>In Discard: <span id="discard-count-display" class="value">0</span></p>
-                    <p>Traumas: <span id="trauma-count-display" class="value">0</span></p>
-                    <button id="view-deck-button">View Full Deck</button>
+                <div id="player-hand-encounter-overlay">
+                    <!-- Cards appear here as an overlay at bottom of encounter view -->
                 </div>
-
-                <div id="message-log-display">
-                    <h3>Event Log</h3>
-                    <div id="log-entries">
-                        <p class="log-entry system">Awaiting consciousness...</p>
-                    </div>
+                <div id="encounter-controls-bar">
+                    <button id="reveal-trait-encounter">Reveal Trait (1 Insight)</button>
+                    <button id="end-turn-encounter">End Turn</button>
                 </div>
-
-                <div id="journal-display">
-                    <h3>Psychonaut's Journal</h3>
-                    <div id="journal-entries">
-                        <p class="journal-entry placeholder">The pages are blank, aching for input...</p>
-                    </div>
-                    <button id="add-journal-entry-button">Add Personal Note</button>
-                </div>
-            </aside>
-
+            </div>
         </main>
 
-        <footer id="game-footer">
-            <button id="game-menu-button">Game Menu</button>
-            <span id="game-version">Sunless Psyche v0.1.0 (Awakening v2.1)</span>
+        <!-- Psychonaut's Dashboard (Persistent Bottom Bar) -->
+        <footer id="psychonaut-dashboard">
+            <div class="dashboard-vitals">
+                <div class="vital-stat" id="vital-integrity" title="Integrity">
+                    <span class="icon">❤️</span> <span id="vital-integrity-value">10/10</span>
+                </div>
+                <div class="vital-stat" id="vital-focus" title="Focus">
+                    <span class="icon">💡</span> <span id="vital-focus-value">1/1</span>
+                </div>
+                <div class="vital-stat" id="vital-clarity" title="Clarity">
+                    <span class="icon">👁️</span> <span id="vital-clarity-value">1/20</span>
+                </div>
+                <div class="vital-stat" id="vital-hope" title="Hope">
+                    <span class="icon">✨</span> <span id="vital-hope-value">0/10</span>
+                </div>
+                <div class="vital-stat" id="vital-despair" title="Despair">
+                    <span class="icon">💀</span> <span id="vital-despair-value">7/10</span>
+                </div>
+            </div>
+            <div class="dashboard-actions">
+                <button id="dashboard-journal-button" title="Open Journal">Journal</button>
+                <button id="dashboard-status-button" title="View Full Status">Status</button>
+                <button id="dashboard-concepts-button" title="View Deck/Concepts">Concepts</button>
+                <button id="dashboard-menu-button" title="Game Menu">Menu</button>
+            </div>
         </footer>
 
-        <div id="modal-overlay" class="view-hidden">
-            <div id="modal-deck-view" class="modal-content view-hidden">
-                <h2>Your Deck of Concepts</h2>
-                <ul id="full-deck-list"></ul>
-                <button class="close-modal-button">Close</button>
-            </div>
-
-            <div id="modal-game-over" class="modal-content view-hidden">
-                <h2 id="game-over-title">Psychological Collapse!</h2>
-                <p id="game-over-text">Your journey into the Inner Sea has ended...</p>
-                <button id="restart-game-button">Begin Anew</button>
-            </div>
+        <!-- Event Log Notifications Area -->
+        <div id="event-log-notifications">
+            <!-- Important log messages will appear here briefly -->
         </div>
 
+        <!-- Full Screen Overlays / Modals (Initially Hidden) -->
+        <div id="modal-overlay-fullscreen" class="view-hidden">
+            <div id="journal-modal" class="fullscreen-modal-content view-hidden">
+                <button class="close-fullscreen-modal-button" data-modal-id="journal-modal">X</button>
+                <h2>Psychonaut's Journal</h2>
+                <div id="journal-entries-modal">
+                    <p class="journal-entry placeholder">The pages are blank...</p>
+                </div>
+                <button id="add-journal-entry-modal-button">Add Personal Note</button>
+            </div>
+
+            <div id="status-modal" class="fullscreen-modal-content view-hidden">
+                <button class="close-fullscreen-modal-button" data-modal-id="status-modal">X</button>
+                <h2>Psychonaut Status</h2>
+                <div id="status-attunements-modal">
+                    <h3>Attunements</h3>
+                    <!-- Populated by JS -->
+                </div>
+                <div id="status-memories-modal">
+                    <h3>Active Memories</h3>
+                    <!-- Populated by JS -->
+                </div>
+                <!-- Other status details -->
+            </div>
+
+            <div id="concepts-modal" class="fullscreen-modal-content view-hidden">
+                <button class="close-fullscreen-modal-button" data-modal-id="concepts-modal">X</button>
+                <h2>Deck of Concepts</h2>
+                <div id="concepts-deck-info-modal">
+                    <!-- Deck counts -->
+                </div>
+                <div id="concepts-full-deck-list-modal">
+                    <!-- Full deck list -->
+                </div>
+            </div>
+            
+            <div id="reflect-insights-modal" class="fullscreen-modal-content view-hidden">
+                <button class="close-fullscreen-modal-button" data-modal-id="reflect-insights-modal">X</button>
+                <h2>Reflect on Insights</h2>
+                <div id="playable-insights-list">
+                    <!-- Playable insight cards from hand appear as choices here -->
+                </div>
+            </div>
+
+
+            <div id="game-over-modal-fullscreen" class="fullscreen-modal-content view-hidden">
+                <!-- No close button for game over, only restart -->
+                <h2 id="game-over-title-fullscreen">Psychological Collapse!</h2>
+                <p id="game-over-text-fullscreen">Your journey into the Inner Sea has ended...</p>
+                <button id="restart-game-modal-button">Begin Anew</button>
+            </div>
+            <!-- Other modals: Game Menu, Settings, etc. -->
+        </div>
+
+        <!-- Tooltip Element (remains the same, absolutely positioned) -->
         <div id="tooltip" class="view-hidden"></div>
 
-    </div> <!-- End #game-wrapper -->
+    </div> <!-- End #game-viewport -->
 
+    <!-- JavaScript Files (Order is Crucial) -->
     <script src="js/config.js"></script>
-    <script src="js/ui_manager.js"></script>
+    <script src="js/ui_manager.js"></script> <!-- UI Manager now needs to be aware of new structure -->
     <script src="js/player.js"></script>
     <script src="js/world.js"></script>
     <script src="js/storylet_manager.js"></script>
     <script src="js/encounter_manager.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/main.js"></script> <!-- Main orchestrates all -->
 
 </body>
 </html>

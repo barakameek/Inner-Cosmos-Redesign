@@ -15,7 +15,7 @@ const Game = (() => {
     let currentMapNodeId = null; 
 
     function init() {
-        console.log("Sunless Psyche Main (v2 Awakening - Full with Explore Fix): Initializing...");
+        console.log("Sunless Psyche Main (v2.1 Awakening - Full Final): Initializing...");
         isGameOver = false;
         preGameIntroActive = true;
 
@@ -28,7 +28,7 @@ const Game = (() => {
         _setupGlobalEventListeners();
         _startGameSequence();
 
-        console.log("Sunless Psyche Main (v2 Awakening - Full with Explore Fix): Initialization complete.");
+        console.log("Sunless Psyche Main (v2.1 Awakening - Full Final): Initialization complete.");
     }
 
     function _startGameSequence() {
@@ -192,12 +192,9 @@ const Game = (() => {
                             if(currentViewId === 'map-view') _updateAndRenderNodeMap();
                         }
                     }
-                    // After attempting to process an awakening card, ensure we are on map view.
-                    // This might be redundant if already there, but safe.
-                    switchToNodeMapView(); 
+                    if (currentViewId !== 'map-view') switchToNodeMapView(); 
                     return; 
                 }
-                 // If no awakening cards in hand, it's "contemplated" for the awakening sequence.
                 uiMgr.addLogEntry(`You've processed all current insights from ${node.name}.`, "system");
                 switchToNodeMapView();
                 return;
@@ -214,7 +211,7 @@ const Game = (() => {
                 storyletToStartId = node.storyletOnArrival;
             } else if (node.locationDetails && node.locationDetails.storyletsOnExplore && node.locationDetails.storyletsOnExplore.length > 0) {
                 storyletToStartId = node.locationDetails.storyletsOnExplore[0]; 
-            } else if (node.storyletOnArrival && node.arrivalStoryletCompleted) { 
+            } else if (node.storyletOnArrival && node.arrivalStoryletCompleted && node.id !== "NODE_SHATTERED_SHORE") { 
                  uiMgr.addLogEntry(`You've already contemplated the essence of ${node.name}.`, "system");
                  switchToNodeMapView(); 
                  return;
@@ -348,8 +345,6 @@ const Game = (() => {
     
     function playerRecalledName() { 
         _updateHeaderInfo(false); 
-        // refreshPlayerUI(); // Not strictly needed if effect only changes name, but good for consistency if stats also changed.
-                           // The "Echo of a Name" card *does* change stats, so refresh is good.
         refreshPlayerUI();
     } 
     

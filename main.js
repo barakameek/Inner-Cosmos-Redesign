@@ -73,6 +73,9 @@ class UIManager {
     displayStorylet(title, text) {
         if (this.storyletTitleEl) this.storyletTitleEl.textContent = title;
         if (this.storyletTextEl) this.storyletTextEl.innerHTML = text.replace(/\n/g, '<br>'); // Preserve newlines
+    }
+
+    showStoryletDisplay() { // <<< --- METHOD ADDED HERE ---
         if (this.storyletDisplayEl) this.storyletDisplayEl.classList.remove('hidden');
     }
 
@@ -85,7 +88,8 @@ class UIManager {
 
     createChoiceButton(choiceData, index, isAvailable, requirementText, onClickCallback) {
         const button = document.createElement('button');
-        let buttonText = typeof choiceData.text === 'function' ? choiceData.text(R1_CONFIG.gameStateRef) : choiceData.text; // Use gameStateRef
+        // Ensure gameStateRef is available for dynamic text function
+        let buttonText = typeof choiceData.text === 'function' ? choiceData.text(R1_CONFIG.gameStateRef) : choiceData.text;
         button.innerHTML = `${buttonText} <span class="requirement">${requirementText || ''}</span>`;
         button.disabled = !isAvailable;
         button.onclick = onClickCallback;
@@ -140,7 +144,14 @@ class UIManager {
     setMainButton(text, callback) {
         if (this.mainActionButton) {
             this.mainActionButton.textContent = text;
-            this.mainActionButton.onclick = callback; // Make sure to clear old anonymous functions if not careful
+            // To avoid multiple listeners piling up if callback is an anonymous function:
+            // Clone and replace the button, or manage event listeners more carefully.
+            // For simplicity here, we'll just reassign, assuming callbacks are managed.
+            const newButton = this.mainActionButton.cloneNode(true);
+            newButton.textContent = text;
+            newButton.onclick = callback;
+            this.mainActionButton.parentNode.replaceChild(newButton, this.mainActionButton);
+            this.mainActionButton = newButton;
         }
     }
 }
@@ -158,6 +169,14 @@ const gameState = {
     world_state: { // For story flags, completed storylets, etc.
         // Example: ShatteredShore_story_flags: { awakening_complete: true }
         // Example: completed_storylets: ["SS01_Awakening_Name"]
+        ShatteredShore_story_flags: {}, // Initialize story flags for locations
+        HearthstoneGrotto_story_flags: {},
+        FlotsamGraveyards_story_flags: {},
+        MuseumOfLostIdentities_story_flags: {},
+        CrystallinePassageEntry_story_flags: {},
+        WeepingKelpFringe_story_flags: {},
+        GardenPathEntry_story_flags: {},
+        completed_storylets: []
     },
     currentLocation: R1_CONFIG.gameSettings.startingLocation,
     currentRegion: R1_CONFIG.gameSettings.startingRegion,
@@ -169,7 +188,7 @@ const gameState = {
             this.inventory.concepts.push(conceptId);
             const conceptData = R1_CONFIG.concepts[conceptId];
             if (conceptData && typeof conceptData.onAcquire === 'function') {
-                uiManager.updateEventLog(conceptData.onAcquire(this));
+                uiManager.updateEventLog(conceptData.onAcquire(this)); // Pass 'this' (gameState)
             } else if (conceptData) {
                  uiManager.updateEventLog(`New Concept Acquired: ${conceptData.name}`);
             }
@@ -187,7 +206,7 @@ const gameState = {
                 uiManager.updateEventLog(`Acquired Item: ${itemName}`);
                 uiManager.updateKeyItems(this.inventory.key_items);
             }
-        } else if (itemCategory === "resources") {
+        } else if (itemCategory === "resources") { // Note: 'clarity' is under player_character in config, this is for generic resources
             this.inventory.resources[itemName] = (this.inventory.resources[itemName] || 0) + 1;
             // uiManager.updateResourcesDisplay(); // If you add a resources display
             uiManager.updateEventLog(`Gained Resource: ${itemName}`);
@@ -207,12 +226,13 @@ const gameState = {
             }
         }
     },
-    // Add more helper functions as needed (e.g., for changing stats, attunements, setting flags)
-    setWorldFlag: function(flagPath, value) { // e.g., "ShatteredShore_story_flags.awakening_complete", true
+    setWorldFlag: function(flagPath, value) {
         let path = flagPath.split('.');
         let obj = this.world_state;
         for (let i = 0; i < path.length - 1; i++) {
-            if (!obj[path[i]]) obj[path[i]] = {};
+            if (typeof obj[path[i]] === 'undefined') { // Ensure intermediate objects exist
+                obj[path[i]] = {};
+            }
             obj = obj[path[i]];
         }
         obj[path[path.length - 1]] = value;
@@ -234,6 +254,13 @@ let storyletManager;
 
 window.onload = () => {
     uiManager = new UIManager();
+    // Initialize gameState.player_character.clarity if it's meant to be a resource in inventory
+    if (typeof gameState.player_character.clarity !== 'undefined') {
+        gameState.inventory.resources.clarity = gameState.player_character.clarity;
+        delete gameState.player_character.clarity; // Remove from player_character if it's now in inventory.resources
+    }
+
+
     storyletManager = new StoryletManager(R1_CONFIG, gameState, uiManager);
 
     // Initial UI setup based on gameState
@@ -247,5 +274,9 @@ window.onload = () => {
     storyletManager.startCurrentLocation();
 
     // Setup initial main button action (will be overridden by storylet manager if storylet is active)
-    uiManager.setMainButton("Examine Surroundings", () => storyletManager.loadDefaultStoryletForLocation());
+    // The storyletManager.loadStorylet also sets this button when a storylet is active
+    // This is a fallback for when no storylet is active.
+    if (document.getElementById('storylet-display').classList.contains('hidden')) {
+        uiManager.setMainButton("Examine Surroundings", () => storyletManager.loadDefaultStoryletForLocation());
+    }
 };

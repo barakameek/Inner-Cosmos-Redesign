@@ -16,24 +16,14 @@ const CONFIG = {
 
 // --- Player Initial Stats & Resources (For "The Precipice" Start) ---
 const PLAYER_INITIAL_STATS = {
-    integrity: 10,
-    maxIntegrity: 10, 
-    focus: 1,
-    maxFocus: 1, 
-    clarity: 1,
-    maxClarity: 20, 
-    hope: 0,
-    maxHope: 10,
-    despair: 7, 
-    maxDespair: 10,
+    integrity: 10, maxIntegrity: 10, 
+    focus: 1, maxFocus: 1, 
+    clarity: 1, maxClarity: 20, 
+    hope: 0, maxHope: 10, 
+    despair: 7, maxDespair: 10, 
     insight: 0, 
-    attunements: { 
-        attraction: 0, interaction: 0, sensory: 0, 
-        psychological: 0, cognitive: 0, relational: 0, 
-        rolefocus: 0, 
-    },
-    memories: [], 
-    personaStance: null, 
+    attunements: { attraction: 0, interaction: 0, sensory: 0, psychological: 0, cognitive: 0, relational: 0, rolefocus: 0, },
+    memories: [], personaStance: null, 
 };
 
 // --- Attunement Definitions ---
@@ -49,7 +39,16 @@ const ATTUNEMENT_DEFINITIONS = {
 
 // --- Concept Card Definitions ---
 const CONCEPT_CARD_DEFINITIONS = {
-    "AWK001": { id: "AWK001", name: "Grasp for Awareness", type: "Technique", attunement: "Cognitive", cost: 0, keywords: ["#Focus", "#Draw"], description: "A primal urge to understand. Gain 1 Focus. Draw 1 card from your Awakening insights.", effectFunctionName: "playGraspForAwareness" },
+    "AWK001": { 
+        id: "AWK001", 
+        name: "Grasp for Awareness", 
+        type: "Technique", 
+        attunement: "Cognitive", 
+        cost: 0, 
+        keywords: ["#Focus", "#Draw", "#Clarity"], 
+        description: "A primal urge to understand. Gain 1 Focus, +1 Clarity. Draw 1 card from your Awakening insights.", // MODIFIED
+        effectFunctionName: "playGraspForAwareness" 
+    },
     "AWK002": { id: "AWK002", name: "Fragmented Memory: The Fall", type: "Insight", attunement: "Cognitive", cost: 1, keywords: ["#Reveal", "#Clarity", "#TraumaSource"], description: "Witness a sliver of how you arrived. Gain 2 Clarity. Add 'Disorientation' (Trauma) to your discard pile.", effectFunctionName: "playFragmentedMemoryTheFall" },
     "AWK003": { id: "AWK003", name: "Echo of a Name", type: "Technique", attunement: "Psychological", cost: 1, keywords: ["#Self", "#Heal", "#IntegrityBoost", "#FocusBoost"], description: `Recall a faint echo. Your name is ${CONFIG.INITIAL_PSYCHONAUT_NAME}. Gain +40 Max Integrity. Heal 20 Integrity. Gain +2 Max Focus. Restore 2 Focus.`, effectFunctionName: "playEchoOfAName" },
     "AWK004": { id: "AWK004", name: "Primal Fear", type: "Expression", attunement: "Interaction", cost: 1, keywords: ["#Pressure", "#Fear", "#DissonanceSource"], description: "A raw, instinctual reaction. Apply 3 'Fear' (Pressure) to an unformed threat. Builds 1 Dissonance with self.", effectFunctionName: "playPrimalFear" },
@@ -78,7 +77,7 @@ const ASPECT_TEMPLATES = {
             { name: "Craves Certainty", description: "#Reveal Concepts deal +1 Pressure to it." } 
         ], 
         intents: [ 
-            { id: "INT_DOUBT_01", name: "Sow Confusion", description: "Attempts to add 1 'Disorientation' (Trauma) to player's discard.", functionName: "intentSowConfusion", params: { traumaId: "TRM001" } }, // Changed to TRM001 for consistency
+            { id: "INT_DOUBT_01", name: "Sow Confusion", description: "Attempts to add 1 'Disorientation' (Trauma) to player's discard.", functionName: "intentSowConfusion", params: { traumaId: "TRM001" } }, 
             { id: "INT_DOUBT_02", name: "Whisper Discouragement", description: "Player loses 1 Hope.", functionName: "intentWhisperDiscouragement" }, 
             { id: "INT_DOUBT_03", name: "Fade Away", description: "Aspect attempts to disengage after 2 turns if Resolve > 0.", functionName: "intentFadeAway"} 
         ], 
@@ -92,7 +91,7 @@ const MEMORY_DEFINITIONS = {
         name: "Tarnished Locket", 
         type: "Passive", 
         description: "A dim, silver locket, cold to the touch. It feels familiar, a phantom weight against a forgotten chest. When Hope is critically low (1 or 0), provides +1 Hope at the start of your turn (in encounter or new 'day').", 
-        onHopeCriticallyLowFunctionName: "effectTarnishedLocketHope" // This implies a game loop check or turn start check
+        onHopeCriticallyLowFunctionName: "effectTarnishedLocketHope"
     }
 };
 
@@ -131,12 +130,11 @@ const STORYLET_DATA_MINIMAL = {
     "STORY_NICHE_ARRIVAL": { id: "STORY_NICHE_ARRIVAL", title: "The Weeping Niche", text: "A narrow cleft in the rock, damp and cold. The sorrow here is a palpable presence, clinging to you like a shroud. The source of a faint, mournful sound is a single, tear-shaped fungus, pulsing with a faint, melancholy light. It seems to... respond to your proximity.", choices: [ { text: "Reach out to the fungus with empathy.", outcomeFunctionName: "outcomeTouchFungusEmpathy" }, { text: "Observe the fungus from a distance, analyze it.", outcomeFunctionName: "outcomeObserveFungusCognitive" }, { text: "Attempt to harvest the fungus.", outcomeFunctionName: "outcomeHarvestFungus" } ] },
     "STORY_SANCTUARY_INTRO_AWAKENING": { id: "STORY_SANCTUARY_INTRO_AWAKENING", title: "The Keeper's Gaze", text: "The Keeper of the Threshold Sanctum regards you with ancient, luminous eyes. 'Another stray spark, washed up on the shores of the unthought. You are tattered, child of the surface, more echo than substance. But perhaps not entirely lost. This Threshold is but a small haven in the Inner Sea, the ocean of consciousness. What do you seek from this place, or from me?'", choices: [ { text: "\"Where am I? What is this place?\"", outcomeFunctionName: "outcomeKeeperExplainInnerSea" }, { text: "\"How do I leave? How do I get back to... before?\"", outcomeFunctionName: "outcomeKeeperExplainReturn" }, { text: "\"I feel... broken. Unmade.\"", outcomeFunctionName: "outcomeKeeperOfferRest", conditionFunctionName: "conditionPlayerNotAtMaxIntegrity"}, { text: "\"I need to understand these whispers... this sense of loss.\"", outcomeFunctionName: "outcomeKeeperAddressAmbition" } ] },
     "STORY_KEEPER_ADVICE_OPTIONAL": { id: "STORY_KEEPER_ADVICE_OPTIONAL", title: "Further Counsel", text: "The Keeper inclines their head. 'You have more questions, or seek a different path now?'", choices: [ { text: "Ask about surviving the Inner Sea.", outcomeFunctionName: "outcomeKeeperSurvivalTips" }, { text: "Inquire about the nature of 'Concepts'.", outcomeFunctionName: "outcomeKeeperExplainConcepts" }, { text: "No more questions for now.", outcomeFunctionName: "outcomeEndConversationWithKeeper" } ] },
-    "STORY_ARCHIVES_ENTRANCE_MSG": {id: "STORY_ARCHIVES_ENTRANCE_MSG", title: "Path to Regret", text: "The air grows heavy here, thick with unspoken sorrows and the dust of forgotten moments. This path seems to lead towards the Archives the Keeper mentioned.", choices: [{text: "Proceed with caution.", outcomeFunctionName: "outcomeEndConversationWithKeeper"}]} // Placeholder, outcome should likely lead to a new node or storylet
+    "STORY_ARCHIVES_ENTRANCE_MSG": {id: "STORY_ARCHIVES_ENTRANCE_MSG", title: "Path to Regret", text: "The air grows heavy here, thick with unspoken sorrows and the dust of forgotten moments. This path seems to lead towards the Archives the Keeper mentioned.", choices: [{text: "Proceed with caution.", outcomeFunctionName: "outcomeEndConversationWithKeeper"}]} 
 };
 
 const PERSONA_STANCE_DEFINITIONS = {
     "OBSERVER": { id: "OBSERVER", name: "Observer Stance", description: "A balanced, cautious stance. +1 Focus regeneration at the start of your turn in encounters.", modifiers: { focusRegenBonus: 1 } }
 };
 
-// No executable code or init() functions in config.js
-console.log("Config.js (v2 Awakening - Full) loaded and parsed.");
+console.log("Config.js (v2 Awakening - Full Corrected) loaded and parsed.");

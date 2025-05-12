@@ -14,11 +14,14 @@ const World = (() => { // IIFE for a module-like structure
 
         if (Object.keys(allNodes).length === 0) {
             console.error("CRITICAL: No map nodes loaded from NODE_MAP_DATA in config.js!");
-            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
-                UIManager.addLogEntry("FATAL ERROR: The Inner Sea's geography is undefined!", "critical_system");
+            // UIManager might not be initialized yet if this is called before UIManager.init()
+            // So, direct console log is safer here.
+            // If Game.notify exists, that would be better for in-game logging.
+            if (typeof Game !== 'undefined' && Game.notify) {
+                Game.notify("FATAL ERROR: The Inner Sea's geography is undefined!", "critical_system");
             }
         } else {
-            console.log("World (v2.1 Awakening - Full) initialized with node map data.");
+            console.log("World (v2.1 Awakening - Full Corrected) initialized with node map data.");
         }
     }
 
@@ -63,14 +66,14 @@ const World = (() => { // IIFE for a module-like structure
     function placePlayerAtNode(nodeId) {
         if (allNodes[nodeId]) {
             currentPsychonautNodeId = nodeId;
-            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
-                UIManager.addLogEntry(`Consciousness anchors at: ${allNodes[nodeId].name}.`, "system_major_event");
+            if (typeof Game !== 'undefined' && Game.notify) { // Use Game.notify for consistency
+                Game.notify(`Consciousness anchors at: ${allNodes[nodeId].name}.`, "system_major_event");
             }
             return allNodes[nodeId];
         } else {
             console.error(`Cannot place player: Node ID "${nodeId}" does not exist.`);
-            if (typeof UIManager !== 'undefined' && UIManager.addLogEntry) {
-                UIManager.addLogEntry(`Error: Cannot materialize at unknown node "${nodeId}".`, "error");
+            if (typeof Game !== 'undefined' && Game.notify) {
+                Game.notify(`Error: Cannot materialize at unknown node "${nodeId}".`, "error");
             }
             return null;
         }
@@ -88,24 +91,31 @@ const World = (() => { // IIFE for a module-like structure
     }
 
     function navigateToNode(targetNodeId, player) {
-        if (!player) { console.error("Player object not provided for navigation cost in World.navigateToNode."); if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry("Error: Player context missing for navigation.", "error"); return false; }
-        if (!allNodes[targetNodeId]) { if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Target node "${targetNodeId}" does not exist.`, "error"); return false; }
+        if (!player) { 
+            console.error("Player object not provided for navigation cost in World.navigateToNode."); 
+            if(typeof Game !== 'undefined' && Game.notify) Game.notify("Error: Player context missing for navigation.", "error"); 
+            return false; 
+        }
+        if (!allNodes[targetNodeId]) { 
+            if(typeof Game !== 'undefined' && Game.notify) Game.notify(`Error: Target node "${targetNodeId}" does not exist.`, "error"); 
+            return false; 
+        }
 
         if (canNavigateToNode(targetNodeId)) {
-            const navigationCost = 1; 
+            const navigationCost = 1; // Default cost for now
             if (player.clarity >= navigationCost) {
                 player.modifyClarity(-navigationCost, `navigating to ${allNodes[targetNodeId].name}`);
                 const previousNodeName = allNodes[currentPsychonautNodeId].name;
                 currentPsychonautNodeId = targetNodeId;
                 const newNodeName = allNodes[currentPsychonautNodeId].name;
-                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Journeyed from ${previousNodeName} to ${newNodeName}.`, "system");
+                if(typeof Game !== 'undefined' && Game.notify) Game.notify(`Journeyed from ${previousNodeName} to ${newNodeName}.`, "system");
                 return allNodes[currentPsychonautNodeId];
             } else {
-                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Not enough Clarity to travel to ${allNodes[targetNodeId].name}. (Requires ${navigationCost}, Have: ${player.clarity})`, "warning");
+                if(typeof Game !== 'undefined' && Game.notify) Game.notify(`Not enough Clarity to travel to ${allNodes[targetNodeId].name}. (Requires ${navigationCost}, Have: ${player.clarity})`, "warning");
                 return false;
             }
         } else {
-            if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`No direct path to ${allNodes[targetNodeId].name} from ${allNodes[currentPsychonautNodeId]?.name || 'your current position'}.`, "warning");
+            if(typeof Game !== 'undefined' && Game.notify) Game.notify(`No direct path to ${allNodes[targetNodeId].name} from ${allNodes[currentPsychonautNodeId]?.name || 'your current position'}.`, "warning");
             return false;
         }
     }
@@ -119,12 +129,12 @@ const World = (() => { // IIFE for a module-like structure
         if (allNodes[fromNodeId] && allNodes[toNodeId]) {
             if (!allNodes[fromNodeId].connections.includes(toNodeId)) {
                 allNodes[fromNodeId].connections.push(toNodeId);
-                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`A new path has opened from ${allNodes[fromNodeId].name} towards ${allNodes[toNodeId].name}.`, "discovery");
+                if(typeof Game !== 'undefined' && Game.notify) Game.notify(`A new path has opened from ${allNodes[fromNodeId].name} towards ${allNodes[toNodeId].name}.`, "discovery");
                 return true;
             }
         } else {
             console.error(`Cannot reveal connection: Node ${fromNodeId} or ${toNodeId} not found.`);
-            if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`Error: Could not map path between unknown echoes (${fromNodeId} to ${toNodeId}).`, "error");
+            if(typeof Game !== 'undefined' && Game.notify) Game.notify(`Error: Could not map path between unknown echoes (${fromNodeId} to ${toNodeId}).`, "error");
         }
         return false;
     }
@@ -138,7 +148,7 @@ const World = (() => { // IIFE for a module-like structure
                 if (!allNodes[fromNodeId].lockedConnections.includes(toNodeId)) { 
                     allNodes[fromNodeId].lockedConnections.push(toNodeId); 
                 } 
-                if(typeof UIManager !== 'undefined' && UIManager.addLogEntry) UIManager.addLogEntry(`The path from ${allNodes[fromNodeId].name} to ${allNodes[toNodeId].name} has become impassable.`, "world_event_negative"); 
+                if(typeof Game !== 'undefined' && Game.notify) Game.notify(`The path from ${allNodes[fromNodeId].name} to ${allNodes[toNodeId].name} has become impassable.`, "world_event_negative"); 
                 return true; 
             } 
         } 
@@ -161,9 +171,8 @@ const World = (() => { // IIFE for a module-like structure
     }
 
     function resetWorld() {
-        // Re-initialize allNodes and currentPsychonautNodeId by calling init
         init(); 
-        console.log("World has been reset.");
+        console.log("World (v2.1) has been reset.");
     }
 
     return {

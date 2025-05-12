@@ -1,38 +1,32 @@
 // js/world.js
 
-const World = (() => { // IIFE for a module-like structure
+const World = (() => { 
 
-    let allNodes = {}; // Will store all node data from NODE_MAP_DATA, keyed by ID
-    let currentPsychonautNodeId = null; // ID of the player's current node
+    let allNodes = {}; 
+    let currentPsychonautNodeId = null; 
 
-    // --- Initialization ---
     function init() {
         allNodes = {}; 
         currentPsychonautNodeId = null; 
-
         _loadNodeMapData(); 
 
         if (Object.keys(allNodes).length === 0) {
             console.error("CRITICAL: No map nodes loaded from NODE_MAP_DATA in config.js!");
-            // UIManager might not be initialized yet if this is called before UIManager.init()
-            // So, direct console log is safer here.
-            // If Game.notify exists, that would be better for in-game logging.
             if (typeof Game !== 'undefined' && Game.notify) {
                 Game.notify("FATAL ERROR: The Inner Sea's geography is undefined!", "critical_system");
             }
         } else {
-            console.log("World (v2.1 Awakening - Full Corrected) initialized with node map data.");
+            console.log("World (v2.1 Awakening - Full Corrected v2) initialized.");
         }
     }
 
     function _loadNodeMapData() {
-        // Assumes NODE_MAP_DATA and LOCATION_DATA_MINIMAL are globally available from config.js
         if (typeof NODE_MAP_DATA !== 'undefined') {
             for (const nodeId in NODE_MAP_DATA) {
                 if (NODE_MAP_DATA.hasOwnProperty(nodeId)) {
                     allNodes[nodeId] = { ...NODE_MAP_DATA[nodeId] };
                     allNodes[nodeId].connections = Array.isArray(allNodes[nodeId].connections) ? [...allNodes[nodeId].connections] : [];
-                    allNodes[nodeId].arrivalStoryletCompleted = false; // Initialize flag
+                    allNodes[nodeId].arrivalStoryletCompleted = false; 
                     if (typeof LOCATION_DATA_MINIMAL !== 'undefined' && LOCATION_DATA_MINIMAL[nodeId]) { 
                         allNodes[nodeId].locationDetails = { ...LOCATION_DATA_MINIMAL[nodeId] };
                     }
@@ -66,7 +60,7 @@ const World = (() => { // IIFE for a module-like structure
     function placePlayerAtNode(nodeId) {
         if (allNodes[nodeId]) {
             currentPsychonautNodeId = nodeId;
-            if (typeof Game !== 'undefined' && Game.notify) { // Use Game.notify for consistency
+            if (typeof Game !== 'undefined' && Game.notify) { 
                 Game.notify(`Consciousness anchors at: ${allNodes[nodeId].name}.`, "system_major_event");
             }
             return allNodes[nodeId];
@@ -91,18 +85,11 @@ const World = (() => { // IIFE for a module-like structure
     }
 
     function navigateToNode(targetNodeId, player) {
-        if (!player) { 
-            console.error("Player object not provided for navigation cost in World.navigateToNode."); 
-            if(typeof Game !== 'undefined' && Game.notify) Game.notify("Error: Player context missing for navigation.", "error"); 
-            return false; 
-        }
-        if (!allNodes[targetNodeId]) { 
-            if(typeof Game !== 'undefined' && Game.notify) Game.notify(`Error: Target node "${targetNodeId}" does not exist.`, "error"); 
-            return false; 
-        }
+        if (!player) { console.error("Player object not provided for navigation cost in World.navigateToNode."); if(typeof Game !== 'undefined' && Game.notify) Game.notify("Error: Player context missing for navigation.", "error"); return false; }
+        if (!allNodes[targetNodeId]) { if(typeof Game !== 'undefined' && Game.notify) Game.notify(`Error: Target node "${targetNodeId}" does not exist.`, "error"); return false; }
 
         if (canNavigateToNode(targetNodeId)) {
-            const navigationCost = 1; // Default cost for now
+            const navigationCost = 1; 
             if (player.clarity >= navigationCost) {
                 player.modifyClarity(-navigationCost, `navigating to ${allNodes[targetNodeId].name}`);
                 const previousNodeName = allNodes[currentPsychonautNodeId].name;

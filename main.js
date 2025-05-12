@@ -266,9 +266,13 @@ window.onload = () => {
     uiManager = new UIManager();
 
     // Handle 'clarity' if it was in initialPlayerStats and should be a resource
-    if (typeof gameState.player_character.clarity !== 'undefined') {
-        gameState.inventory.resources.clarity = gameState.player_character.clarity;
-        delete gameState.player_character.clarity;
+    // Also ensure player_character.attunements is an object
+    if (gameState.player_character && !gameState.player_character.attunements) {
+        gameState.player_character.attunements = { psychological: 1, cognitive: 1, interaction: 1, sensory: 1 };
+    }
+    if (R1_CONFIG.gameSettings.initialPlayerStats.clarity !== undefined) { // Check config if clarity was there
+        gameState.inventory.resources.clarity = R1_CONFIG.gameSettings.initialPlayerStats.clarity;
+        // delete gameState.player_character.clarity; // Only if it was on player_character to begin with
     } else if (typeof gameState.inventory.resources.clarity === 'undefined') {
         // Ensure clarity resource exists if not set from player_character
         gameState.inventory.resources.clarity = 0;

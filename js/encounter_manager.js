@@ -15,7 +15,7 @@ const EncounterManager = (() => {
 
     function init(player) {
         currentPlayerRef = player;
-        console.log("EncounterManager (v2.1 Awakening - Full) initialized.");
+        console.log("EncounterManager (v2.1 Awakening - Full Corrected v2) initialized.");
     }
 
     function startEncounter(aspectId, previousViewId = 'map-view') {
@@ -58,8 +58,6 @@ const EncounterManager = (() => {
         _chooseAspectIntent(); 
 
         if(typeof Game !== 'undefined' && Game.notify) Game.notify(`Encounter begins: ${currentAspect.name} materializes!`, "critical_system");
-        // Game.switchToView('encounter-view') is called by main.js before this.
-        // UIManager.displayEncounterView will be called by _startPlayerTurn or _updateEncounterUIDisplay
         _startPlayerTurn(); 
         return true;
     }
@@ -78,81 +76,10 @@ const EncounterManager = (() => {
         playerEncounterState = { composure: 0, disorientationClaritySpentThisTurn: false }; 
         if(typeof Game !== 'undefined' && Game.returnFromEncounter) Game.returnFromEncounter(viewToReturnToAfterEncounter); 
     }
-
-    function _startPlayerTurn() { 
-        if (!isActive || !currentAspect) return; 
-        if(Game && Game.notify) Game.notify("--- Your Turn ---", "turn"); 
-        playerEncounterState.disorientationClaritySpentThisTurn = false; 
-        currentPlayerRef.startTurnInEncounter(); 
-        _updateEncounterUIDisplay(); 
-        if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = false; 
-        if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); 
-    }
-
-    function _endPlayerTurn() { 
-        if (!isActive || !currentAspect) return; 
-        if(Game && Game.notify) Game.notify("You steady your thoughts, ending your turn.", "system"); 
-        if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = true; 
-        _startAspectTurn(); 
-    }
-
-    function _startAspectTurn() { 
-        if (!isActive || !currentAspect) return; 
-        currentAspect.turnCount++; 
-        if(Game && Game.notify) Game.notify(`--- ${currentAspect.name}'s Turn (${currentAspect.turnCount}) ---`, "turn"); 
-        if (currentAspect.tookPressureThisTurn && currentAspect.visibleTraits.some(t => t.name.includes("Grudge Holder"))) { _gainAspectComposure(1, "Grudge Holder Trait"); } 
-        currentAspect.tookPressureThisTurn = false; 
-        _updateAspectStates(); 
-        if (currentAspect.currentIntent && typeof aspectIntentEffects[currentAspect.currentIntent.functionName] === 'function') { 
-            if(Game && Game.notify) Game.notify(`${currentAspect.name} intends: ${currentAspect.currentIntent.description}`, "intent"); 
-            aspectIntentEffects[currentAspect.currentIntent.functionName](currentAspect.currentIntent.params || {}); 
-        } else { if(Game && Game.notify) Game.notify(`${currentAspect.name} hesitates.`, "system"); } 
-        if (_checkEncounterWinLoss()) return; 
-        _chooseAspectIntent(); 
-        _updateEncounterUIDisplay(); 
-        if (isActive) { setTimeout(() => { if (isActive) _startPlayerTurn(); }, 800); } 
-    }
-
-    function playConceptCard(cardId) { 
-        if (!isActive || !currentPlayerRef || !currentAspect) return; 
-        const cardDef = CONCEPT_CARD_DEFINITIONS[cardId]; 
-        if (!cardDef) { if(Game && Game.notify) Game.notify(`Error playing unknown Concept ID: ${cardId}`, "error"); return; } 
-        
-        let actualCost = cardDef.cost;
-        const disorientationInHand = currentPlayerRef.hand.some(id => id === "TRM001");
-        if (cardDef.id !== "TRM001" && disorientationInHand && !playerEncounterState.disorientationClaritySpentThisTurn) {
-            actualCost += 1;
-        }
-
-        if (!currentPlayerRef.spendFocusForCard(actualCost, cardDef.name)) return; 
-
-        const playedCard = currentPlayerRef.playCardFromHand(cardId); 
-        if (!playedCard) { console.error(`Failed to retrieve ${cardId} from hand after focus spend.`); return; } 
-
-        if(Game && Game.notify) Game.notify(`Played ${cardDef.name}.`, "player_action"); 
-
-        if (cardDef.effectFunctionName && typeof conceptCardEffects[cardDef.effectFunctionName] === 'function') {
-            conceptCardEffects[cardDef.effectFunctionName](cardDef);
-        } else { if(Game && Game.notify) Game.notify(`Effect for ${cardDef.name} not yet defined.`, "error"); } 
-
-        if (cardDef.keywords.includes("#DissonanceSource") && currentAspect.visibleTraits.some(t => t.name.includes("Feeds on Negativity"))) {
-            if(Game && Game.notify) Game.notify(`${currentAspect.name} draws strength from the dissonance!`, "aspect_action_subtle");
-            _gainAspectComposure(1, "Feeds on Negativity");
-        }
-        const isChallenge = cardDef.keywords.includes("#Challenge");
-        const lashesOutTrait = currentAspect.hiddenTraits.find(t => t.name.includes("Lashes Out") && currentAspect.revealedTraits.includes(t.name));
-        if (isChallenge && lashesOutTrait && currentAspect.resolve < (currentAspect.maxResolve * 0.4)) {
-            if(Game && Game.notify) Game.notify(`TRAIT TRIGGER: ${currentAspect.name} 'Lashes Out When Cornered'!`, "critical");
-            const lashOutIntent = currentAspect.intents.find(intent => intent.id === "INT_DOUBT_01" || intent.name.includes("Jab")); 
-            if (lashOutIntent && typeof aspectIntentEffects[lashOutIntent.functionName] === 'function') {
-                 aspectIntentEffects[lashOutIntent.functionName](lashOutIntent.params || {});
-            }
-        }
-        _updateEncounterUIDisplay(); 
-        if (_checkEncounterWinLoss()) return; 
-        if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); 
-    }
-
+    function _startPlayerTurn() { if (!isActive || !currentAspect) return; if(Game && Game.notify) Game.notify("--- Your Turn ---", "turn"); playerEncounterState.disorientationClaritySpentThisTurn = false; currentPlayerRef.startTurnInEncounter(); _updateEncounterUIDisplay(); if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = false; if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
+    function _endPlayerTurn() { if (!isActive || !currentAspect) return; if(Game && Game.notify) Game.notify("You steady your thoughts, ending your turn.", "system"); if(UIManager && UIManager.getDOMElement('endTurnEncounterButton')) UIManager.getDOMElement('endTurnEncounterButton').disabled = true; _startAspectTurn(); }
+    function _startAspectTurn() { if (!isActive || !currentAspect) return; currentAspect.turnCount++; if(Game && Game.notify) Game.notify(`--- ${currentAspect.name}'s Turn (${currentAspect.turnCount}) ---`, "turn"); if (currentAspect.tookPressureThisTurn && currentAspect.visibleTraits.some(t => t.name.includes("Grudge Holder"))) { _gainAspectComposure(1, "Grudge Holder Trait"); } currentAspect.tookPressureThisTurn = false; _updateAspectStates(); if (currentAspect.currentIntent && typeof aspectIntentEffects[currentAspect.currentIntent.functionName] === 'function') { if(Game && Game.notify) Game.notify(`${currentAspect.name} intends: ${currentAspect.currentIntent.description}`, "intent"); aspectIntentEffects[currentAspect.currentIntent.functionName](currentAspect.currentIntent.params || {}); } else { if(Game && Game.notify) Game.notify(`${currentAspect.name} hesitates.`, "system"); } if (_checkEncounterWinLoss()) return; _chooseAspectIntent(); _updateEncounterUIDisplay(); if (isActive) { setTimeout(() => { if (isActive) _startPlayerTurn(); }, 800); } }
+    function playConceptCard(cardId) { if (!isActive || !currentPlayerRef || !currentAspect) return; const cardDef = CONCEPT_CARD_DEFINITIONS[cardId]; if (!cardDef) { if(Game && Game.notify) Game.notify(`Error playing unknown Concept ID: ${cardId}`, "error"); return; } let actualCost = cardDef.cost; const disorientationInHand = currentPlayerRef.hand.some(id => id === "TRM001"); if (cardDef.id !== "TRM001" && disorientationInHand && !playerEncounterState.disorientationClaritySpentThisTurn) { actualCost += 1; } if (!currentPlayerRef.spendFocusForCard(actualCost, cardDef.name)) return; const playedCard = currentPlayerRef.playCardFromHand(cardId); if (!playedCard) { console.error(`Failed to retrieve ${cardId} from hand after focus spend.`); return; } if(Game && Game.notify) Game.notify(`Played ${cardDef.name}.`, "player_action"); if (cardDef.effectFunctionName && typeof conceptCardEffects[cardDef.effectFunctionName] === 'function') { conceptCardEffects[cardDef.effectFunctionName](cardDef); } else { if(Game && Game.notify) Game.notify(`Effect for ${cardDef.name} not yet defined.`, "error"); } if (cardDef.keywords.includes("#DissonanceSource") && currentAspect.visibleTraits.some(t => t.name.includes("Feeds on Negativity"))) { if(Game && Game.notify) Game.notify(`${currentAspect.name} draws strength from the dissonance!`, "aspect_action_subtle"); _gainAspectComposure(1, "Feeds on Negativity"); } const isChallenge = cardDef.keywords.includes("#Challenge"); const lashesOutTrait = currentAspect.hiddenTraits.find(t => t.name.includes("Lashes Out") && currentAspect.revealedTraits.includes(t.name)); if (isChallenge && lashesOutTrait && currentAspect.resolve < (currentAspect.maxResolve * 0.4)) { if(Game && Game.notify) Game.notify(`TRAIT TRIGGER: ${currentAspect.name} 'Lashes Out When Cornered'!`, "critical"); const lashOutIntent = currentAspect.intents.find(intent => intent.id === "INT_DOUBT_01" || intent.name.includes("Jab")); if (lashOutIntent && typeof aspectIntentEffects[lashOutIntent.functionName] === 'function') { aspectIntentEffects[lashOutIntent.functionName](lashOutIntent.params || {}); } } _updateEncounterUIDisplay(); if (_checkEncounterWinLoss()) return; if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
     function _getUnrevealedTraitCount() { if (!currentAspect) return 0; return currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name)).length; }
     function _updateEncounterUIDisplay() { if (!isActive || !currentAspect || !currentPlayerRef || !UIManager) return; UIManager.displayEncounterView(currentAspect, currentPlayerRef, playerEncounterState); UIManager.updatePlayerHand(currentPlayerRef.getHandCardDefinitions()); }
     function _applyPressureToAspect(amount, source = "a Concept") { if (!currentAspect) return; let pressureApplied = amount; if (currentAspect.states.some(s => s.name === "Vulnerable")) pressureApplied *= 1.5; if (currentAspect.composure > 0) { const absorbed = Math.min(pressureApplied, currentAspect.composure); currentAspect.composure -= absorbed; pressureApplied -= absorbed; if(Game && Game.notify) Game.notify(`${currentAspect.name}'s Composure absorbs ${absorbed} Pressure.`, "combat"); } if (pressureApplied > 0) { currentAspect.resolve -= Math.floor(pressureApplied); currentAspect.tookPressureThisTurn = true; if(Game && Game.notify) Game.notify(`${currentAspect.name} takes ${Math.floor(pressureApplied)} Pressure from ${source}. Resolve: ${currentAspect.resolve}/${currentAspect.maxResolve}`, "combat_crit"); } if (currentAspect.resolve <= 0) currentAspect.resolve = 0; }
@@ -162,43 +89,23 @@ const EncounterManager = (() => {
     function _applyAspectState(stateObject) { if (!currentAspect) return; let existingState = currentAspect.states.find(s => s.name === stateObject.name); if (existingState) { existingState.duration = Math.max(existingState.duration || 0, stateObject.duration || 0); if(stateObject.data) existingState.data = {...existingState.data, ...stateObject.data}; } else { currentAspect.states.push(stateObject); } if(Game && Game.notify) Game.notify(`${currentAspect.name} becomes ${stateObject.name}.`, "aspect_action_subtle"); }
     function _updateAspectStates() { if (!currentAspect || !currentAspect.states) return; currentAspect.states = currentAspect.states.filter(state => { if (state.duration !== undefined) { state.duration--; if (state.duration <= 0) { if(Game && Game.notify) Game.notify(`${currentAspect.name} is no longer ${state.name}.`, "system"); return false; } } return true; }); }
     function _chooseAspectIntent() { if (!currentAspect || !currentAspect.intents || currentAspect.intents.length === 0) { currentAspect.currentIntent = { description: "Stands mutely.", functionName: null }; return; } const availableIntents = currentAspect.intents.filter(intent => { if (intent.id === "INT_DOUBT_03" && currentAspect.turnCount < 2) return false; return true; }); if (availableIntents.length === 0) { currentAspect.currentIntent = currentAspect.intents[0] || { description: "Is still.", functionName: null}; } else { currentAspect.currentIntent = availableIntents[Math.floor(Math.random() * availableIntents.length)]; } }
-    
-    function revealHiddenAspectTrait() { 
-        let cost = 1; 
-        if(currentPlayerRef.detachedObservationActive){ 
-            cost = Math.max(0, cost -1); 
-            currentPlayerRef.detachedObservationActive = false; // Consume buff
-            if(Game && Game.notify) Game.notify("Detached Observation reduces Insight cost for revealing a Trait.", "player_action_good");
-        }
-        if (!isActive || !currentAspect || currentPlayerRef.insight < cost || _getUnrevealedTraitCount() === 0) { 
-            if (currentPlayerRef.insight < cost && Game && Game.notify) Game.notify("Not enough Insight.", "warning"); 
-            else if (_getUnrevealedTraitCount() === 0 && Game && Game.notify) Game.notify("No more hidden traits to reveal on this Aspect.", "system"); 
-            return; 
-        } 
-        currentPlayerRef.modifyInsight(-cost, "revealing a Trait"); 
-        const unrevealed = currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name)); 
-        if (unrevealed.length > 0) { 
-            const traitToReveal = unrevealed[0]; 
-            currentAspect.revealedTraits.push(traitToReveal.name); 
-            if(Game && Game.notify) Game.notify(`Revealed Trait for ${currentAspect.name}: ${traitToReveal.name} - ${traitToReveal.description}`, "discovery"); 
-        } 
-        _updateEncounterUIDisplay(); 
-        if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); // Re-check with base cost 1 for button disable
-    }
-    
+    function revealHiddenAspectTrait() { let cost = 1; if(currentPlayerRef.detachedObservationActive){ cost = Math.max(0, cost -1); currentPlayerRef.detachedObservationActive = false; if(Game && Game.notify) Game.notify("Detached Observation reduces Insight cost for revealing a Trait.", "player_action_good");} if (!isActive || !currentAspect || currentPlayerRef.insight < cost || _getUnrevealedTraitCount() === 0) { if (currentPlayerRef.insight < cost && Game && Game.notify) Game.notify("Not enough Insight.", "warning"); else if (_getUnrevealedTraitCount() === 0 && Game && Game.notify) Game.notify("No more hidden traits to reveal on this Aspect.", "system"); return; } currentPlayerRef.modifyInsight(-cost, "revealing a Trait"); const unrevealed = currentAspect.hiddenTraits.filter(ht => !currentAspect.revealedTraits.includes(ht.name)); if (unrevealed.length > 0) { const traitToReveal = unrevealed[0]; currentAspect.revealedTraits.push(traitToReveal.name); if(Game && Game.notify) Game.notify(`Revealed Trait for ${currentAspect.name}: ${traitToReveal.name} - ${traitToReveal.description}`, "discovery"); } _updateEncounterUIDisplay(); if(UIManager && UIManager.getDOMElement('revealTraitEncounterButton')) UIManager.getDOMElement('revealTraitEncounterButton').disabled = (currentPlayerRef.insight < 1 || _getUnrevealedTraitCount() === 0); }
     function _checkEncounterWinLoss() { if (!isActive || !currentAspect) return false; if (currentPlayerRef.integrity <= 0) { endEncounter("aspect_win"); return true; } if (currentAspect.resolve <= 0) { endEncounter("player_win_resolve"); return true; } if (currentAspect.resonance >= currentAspect.resonanceGoal) { endEncounter("player_win_resonance"); return true; } return false; }
 
     const conceptCardEffects = {
         playGraspForAwareness: (cardDef) => { currentPlayerRef.modifyFocus(1, cardDef.name); currentPlayerRef.modifyClarity(1, cardDef.name); currentPlayerRef.drawFromAwakeningDeck(); },
         playFragmentedMemoryTheFall: (cardDef) => { currentPlayerRef.modifyClarity(2, cardDef.name); currentPlayerRef.addTraumaToDiscard("TRM001"); if(Game && Game.addJournalEntry) Game.addJournalEntry("A Glimpse of the Fall", "Painful, fractured visions... how I arrived. Clarity gained, but Disorientation too."); if(typeof Game !== 'undefined' && Game.revealAwakeningMapConnections) Game.revealAwakeningMapConnections(); },
         playEchoOfAName: (cardDef) => { const name = CONFIG.INITIAL_PSYCHONAUT_NAME; currentPlayerRef.name = name; if(typeof Game !== 'undefined' && Game.playerRecalledName) Game.playerRecalledName(); currentPlayerRef.modifyMaxIntegrity(PLAYER_INITIAL_STATS.maxIntegrity + 40); currentPlayerRef.modifyIntegrity(20, cardDef.name); currentPlayerRef.modifyMaxFocus(PLAYER_INITIAL_STATS.maxFocus + 2); currentPlayerRef.modifyFocus(2, cardDef.name); if(Game && Game.addJournalEntry) Game.addJournalEntry("An Echo, A Name", `I remember... my name is ${name}. Strength returns.`); },
-        playPrimalFear: (cardDef) => { _applyPressureToAspect(3, cardDef.name); _buildDissonance(1, `${cardDef.name} (self)`); },
+        playPrimalFear: (cardDef) => { /* NO COMBAT: This effect is now handled by storylet if chosen */ if(Game && Game.notify) Game.notify(`You channelled your Primal Fear. A wave of raw emotion.`, "player_action_major"); currentPlayerRef.modifyAttunement("interaction", 1, cardDef.name); _buildDissonance(1, `${cardDef.name} (self expression)`); },
         playSharedSorrow: (cardDef) => { let baseRes = 2; _buildResonance(baseRes, cardDef.name); currentPlayerRef.modifyIntegrity(1, cardDef.name); },
         playDetachedObservation: (cardDef) => { currentPlayerRef.detachedObservationActive = true; if(Game && Game.notify) Game.notify("Perspective shifts: your next query will be more focused.", "system_positive"); currentPlayerRef.drawCards(1); },
         playStandardInquiry: (cardDef) => { revealHiddenAspectTrait(); _buildResonance(1, cardDef.name); },
         playStandardChallenge: (cardDef) => { _applyPressureToAspect(4, cardDef.name); _buildDissonance(1, cardDef.name); },
-        onDrawDisorientation: (cardDef) => { if(Game && Game.notify) Game.notify(`TRAUMA EFFECT: ${cardDef.name} clouds your thoughts! (Card costs +1 Focus this turn unless 1 Clarity spent).`, "trauma_major"); /* Actual choice handled by Game.handleTraumaOnDraw */},
-        playDisorientation: (cardDef) => { _buildDissonance(1, cardDef.name + " (played)"); }
+        onDrawDisorientation: (cardDef) => { // This is the function called by Game.handleTraumaOnDraw
+            if(Game && Game.notify) Game.notify(`TRAUMA EFFECT: ${cardDef.name} clouds your thoughts! (Card costs +1 Focus this turn unless 1 Clarity spent).`, "trauma_major");
+            // The *choice* to spend Clarity is handled in Game.handleTraumaOnDraw via confirm()
+        },
+        playDisorientation: (cardDef) => { _buildDissonance(1, cardDef.name + " (played to discard)"); } // Effect if explicitly "played"
     };
 
     const aspectIntentEffects = {

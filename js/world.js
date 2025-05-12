@@ -18,24 +18,23 @@ const World = (() => { // IIFE for a module-like structure
                 UIManager.addLogEntry("FATAL ERROR: The Inner Sea's geography is undefined!", "critical_system");
             }
         } else {
-            console.log("World (v2 Awakening - Full Corrected): Initialized. Player position to be set by Game sequence.");
+            console.log("World (v2.1 Awakening - Full) initialized with node map data.");
         }
     }
 
     function _loadNodeMapData() {
         // Assumes NODE_MAP_DATA and LOCATION_DATA_MINIMAL are globally available from config.js
-        if (NODE_MAP_DATA) {
+        if (typeof NODE_MAP_DATA !== 'undefined') {
             for (const nodeId in NODE_MAP_DATA) {
                 if (NODE_MAP_DATA.hasOwnProperty(nodeId)) {
                     allNodes[nodeId] = { ...NODE_MAP_DATA[nodeId] };
                     allNodes[nodeId].connections = Array.isArray(allNodes[nodeId].connections) ? [...allNodes[nodeId].connections] : [];
                     allNodes[nodeId].arrivalStoryletCompleted = false; // Initialize flag
-                    if (LOCATION_DATA_MINIMAL && LOCATION_DATA_MINIMAL[nodeId]) { 
+                    if (typeof LOCATION_DATA_MINIMAL !== 'undefined' && LOCATION_DATA_MINIMAL[nodeId]) { 
                         allNodes[nodeId].locationDetails = { ...LOCATION_DATA_MINIMAL[nodeId] };
                     }
                 }
             }
-            // Ensure all connected nodes exist in allNodes, creating placeholders if not fully defined
             for (const nodeId in allNodes) {
                 const node = allNodes[nodeId];
                 if(node.connections && Array.isArray(node.connections)) { 
@@ -131,7 +130,7 @@ const World = (() => { // IIFE for a module-like structure
     }
 
     function lockNodeConnection(fromNodeId, toNodeId) { 
-        if (allNodes[fromNodeId] && allNodes[toNodeId] && allNodes[fromNodeId].connections) { 
+        if (allNodes[fromNodeId] && allNodes[toNodeId] && allNodes[fromNodeId].connections && Array.isArray(allNodes[fromNodeId].connections)) { 
             const index = allNodes[fromNodeId].connections.indexOf(toNodeId); 
             if (index > -1) { 
                 allNodes[fromNodeId].connections.splice(index, 1); 
@@ -162,7 +161,9 @@ const World = (() => { // IIFE for a module-like structure
     }
 
     function resetWorld() {
+        // Re-initialize allNodes and currentPsychonautNodeId by calling init
         init(); 
+        console.log("World has been reset.");
     }
 
     return {

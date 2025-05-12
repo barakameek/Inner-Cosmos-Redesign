@@ -11,29 +11,29 @@ body {
     font-family: 'Georgia', 'Times New Roman', serif;
     background-color: #12121f; /* Dark, moody base */
     color: #c8c8e0; /* Pale lavender/off-white for primary text */
-    line-height: 1.7;
-    font-size: 17px;
-    overflow-x: hidden;
+    line-height: 1.7; 
+    font-size: 17px; 
+    overflow-x: hidden; 
 }
 
 #game-wrapper {
-    max-width: 1700px;
-    margin: 0 auto;
-    padding: 15px;
+    max-width: 1700px; 
+    margin: 0 auto; 
+    padding: 15px; 
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: 100vh; 
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Trajan Pro', 'Constantia', 'Palatino Linotype', serif;
-    color: #b0a0e0; /* Muted lavender */
-    margin-bottom: 0.6em;
-    font-weight: normal;
+    color: #b0a0e0; /* Muted lavender for headers */
+    margin-bottom: 0.6em; 
+    font-weight: normal; 
 }
 
 h1 {
-    font-size: 2.8em;
+    font-size: 2.8em; 
     text-align: center;
     text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
     color: #d0c0ff; /* Brighter for main title */
@@ -41,7 +41,7 @@ h1 {
 
 h2 {
     font-size: 1.9em;
-    border-bottom: 1px solid #3a3a5e;
+    border-bottom: 1px solid #3a3a5e; 
     padding-bottom: 0.4em;
 }
 
@@ -58,10 +58,10 @@ button {
     background-color: #38285e; /* Muted dark purple */
     color: #d8d8f0;
     border: 1px solid #504070;
-    padding: 10px 18px;
-    border-radius: 3px;
+    padding: 10px 18px; 
+    border-radius: 3px; 
     cursor: pointer;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-family: 'Segoe UI', Tahoma, sans-serif; 
     font-size: 0.95em;
     transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
@@ -85,22 +85,22 @@ button:disabled {
     box-shadow: none;
 }
 
-.value {
+.value { 
     font-weight: bold;
-    color: #efefff;
+    color: #efefff; 
 }
 
 .placeholder {
     font-style: italic;
-    color: #707090;
+    color: #707090; 
 }
 
 /* --- Header --- */
 #game-header {
-    background-color: rgba(12, 12, 25, 0.7);
+    background-color: rgba(12, 12, 25, 0.7); 
     padding: 15px 20px;
     margin-bottom: 15px;
-    border-bottom: 2px solid #30304e;
+    border-bottom: 2px solid #30304e; 
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -111,35 +111,36 @@ button:disabled {
     color: #a090d0;
 }
 
+
 /* --- Main Content Area (Three Column Layout) --- */
 #main-content-area {
     display: flex;
-    flex-grow: 1;
-    gap: 15px;
+    flex-grow: 1; 
+    gap: 15px; 
 }
 
 #player-status-panel, #context-panel {
-    width: 26%;
-    background-color: #1f1f35;
+    width: 26%; 
+    background-color: #1f1f35; 
     padding: 20px;
-    border-radius: 4px;
-    border: 1px solid #2f2f45;
-    overflow-y: auto;
+    border-radius: 4px; 
+    border: 1px solid #2f2f45; 
+    overflow-y: auto; 
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 20px; 
     box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
 }
 
 #world-interaction-panel {
-    width: 48%;
-    background-color: #181828;
+    width: 48%; 
+    background-color: #181828; 
     padding: 20px;
     border-radius: 4px;
     border: 1px solid #282838;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+    display: flex; 
+    flex-direction: column; 
 }
 
 /* --- Player Status Panel (Left) --- */
@@ -149,24 +150,24 @@ button:disabled {
 .stat-block label {
     display: block;
     margin-bottom: 4px;
-    font-size: 1em;
+    font-size: 1em; 
     color: #a090d0;
 }
 .bar-container {
-    background-color: #101018;
+    background-color: #101018; 
     border-radius: 3px;
-    height: 20px;
+    height: 20px; 
     border: 1px solid #30304e;
     margin-bottom: 4px;
     overflow: hidden;
-    position: relative;
+    position: relative; 
 }
 .bar {
     height: 100%;
-    transition: width 0.4s ease-in-out;
+    transition: width 0.4s ease-in-out; 
     border-radius: 2px;
 }
-.bar.integrity { background: linear-gradient(to right, #30a858, #50c878); }
+.bar.integrity { background: linear-gradient(to right, #30a858, #50c878); } 
 .bar.focus { background: linear-gradient(to right, #2080d0, #30a0f0); }
 .bar.clarity { background: linear-gradient(to right, #d0c060, #f0e080); }
 .bar.hope { background: linear-gradient(to right, #e06060, #f08080); }
@@ -175,7 +176,7 @@ button:disabled {
 #attunements-display ul li, #active-memories-list li {
     font-size: 0.95em;
     padding: 4px 0;
-    border-bottom: 1px dashed #2f2f45;
+    border-bottom: 1px dashed #2f2f45; 
 }
 #active-memories-list li:last-child, #attunements-display ul li:last-child {
     border-bottom: none;
@@ -186,9 +187,9 @@ button:disabled {
     display: none !important;
 }
 .view-active {
-    display: flex !important;
+    display: flex !important; 
     flex-direction: column;
-    flex-grow: 1;
+    flex-grow: 1; 
 }
 
 /* Pre-Game Intro View */
@@ -196,29 +197,27 @@ button:disabled {
     justify-content: center;
     align-items: center;
     text-align: center;
-    background: radial-gradient(circle, #181828 0%, #12121f 70%, #0c0c18 100%); /* Dark vignette */
+    background: radial-gradient(circle, #181828 0%, #12121f 70%, #0c0c18 100%); 
 }
 #pre-game-title {
-    font-size: 2.8em; /* Larger title for intro */
-    color: #605080; /* More faded color */
-    margin-bottom: 40px; /* More space */
+    font-size: 2.8em; 
+    color: #605080; 
+    margin-bottom: 40px; 
     letter-spacing: 2px;
 }
 #pre-game-text-area {
-    max-width: 700px; /* Wider for intro text */
+    max-width: 700px; 
     margin-bottom: 50px;
 }
 #pre-game-text-area .intro-line {
-    font-family: 'Georgia', serif; /* Ensure serif for intro lines */
-    font-size: 1.4em; /* Larger intro text */
-    color: #a090c0; /* Slightly brighter for readability */
+    font-family: 'Georgia', serif; 
+    font-size: 1.4em; 
+    color: #a090c0; 
     margin-bottom: 18px;
     opacity: 0;
-    transform: translateY(10px); /* Start slightly lower */
+    transform: translateY(10px); 
     animation: fadeInLinePreGame 1.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
 }
-/* Stagger animation for each line if JS adds them one by one with delays */
-/* If JS adds all at once and CSS handles delay, this is more complex */
 @keyframes fadeInLinePreGame {
     to {
         opacity: 1;
@@ -228,9 +227,9 @@ button:disabled {
 #continue-from-precipice {
     font-size: 1.3em;
     padding: 14px 30px;
-    background-color: #48386e; /* Slightly more prominent */
+    background-color: #48386e; 
     border: 1px solid #706090;
-    opacity: 0; /* Start hidden */
+    opacity: 0; 
     animation: fadeInLinePreGame 1s 1s ease-out forwards; /* Delay its fade-in */
 }
 #continue-from-precipice:hover {
@@ -240,31 +239,31 @@ button:disabled {
 
 /* Node Map View */
 #map-view {
-    gap: 15px;
+    gap: 15px; 
 }
-#map-view h2 { /* For the "The Inner Sea - Node Name" title */
+#map-view h2 { 
     text-align: center;
     font-size: 1.6em;
 }
 #node-map-container {
-    flex-grow: 1;
-    background-color: rgba(10, 10, 20, 0.6); /* Slightly more transparent */
-    border: 1px solid #2f2f45; /* Consistent border */
+    flex-grow: 1; 
+    background-color: rgba(10, 10, 20, 0.6); 
+    border: 1px solid #2f2f45; 
     border-radius: 4px;
-    padding: 20px; /* More padding */
-    position: relative;
-    min-height: 350px; /* Taller map area */
-    display: flex;
+    padding: 20px; 
+    position: relative; 
+    min-height: 350px; 
+    display: flex; 
     justify-content: center;
     align-items: center;
-    overflow: auto;
+    overflow: auto; 
     box-shadow: inset 0 0 15px rgba(0,0,0,0.4);
 }
-.map-node {
-    position: absolute;
-    width: 120px; /* Larger nodes */
-    min-height: 70px; /* Ensure text fits */
-    background: linear-gradient(135deg, #30204e, #403060); /* Gradient for nodes */
+.map-node { 
+    position: absolute; 
+    width: 120px; 
+    min-height: 70px; 
+    background: linear-gradient(135deg, #30204e, #403060); 
     border: 1px solid #504070;
     border-radius: 4px;
     display: flex;
@@ -286,13 +285,13 @@ button:disabled {
     box-shadow: 0 4px 10px rgba(0,0,0,0.6);
 }
 .map-node.current {
-    border-color: #efefff; /* Bright border for current */
+    border-color: #efefff; 
     background: linear-gradient(135deg, #504070, #605080);
-    box-shadow: 0 0 12px #efefff, 0 0 20px #d0c0ff; /* Glow effect */
-    z-index: 10; /* Bring to front */
+    box-shadow: 0 0 12px #efefff, 0 0 20px #d0c0ff; 
+    z-index: 10; 
 }
-.map-node.accessible:not(.current):hover { /* Specific hover for accessible, non-current */
-    border-color: #b0e0b0; /* Greenish tint for accessible hover */
+.map-node.accessible:not(.current):hover { 
+    border-color: #b0e0b0; 
 }
 .map-node.locked, .map-node.inaccessible {
     background: linear-gradient(135deg, #202030, #282838);
@@ -303,7 +302,7 @@ button:disabled {
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .map-node.locked:hover, .map-node.inaccessible:hover {
-    transform: none; /* No scale effect on locked nodes */
+    transform: none; 
 }
 
 .map-node-name {
@@ -316,7 +315,6 @@ button:disabled {
     font-style: italic;
     color: #a090c0;
 }
-/* Connection lines would be SVG or canvas, styled via JS or specific CSS for those elements */
 
 #map-node-info {
     background-color: rgba(16, 16, 30, 0.7);
@@ -332,21 +330,21 @@ button:disabled {
 
 /* Location View (for Sanctuaries etc.) & Storylet View */
 #location-description, #storylet-text {
-    background-color: rgba(12, 12, 22, 0.7); /* Slightly more transparent */
-    padding: 18px; /* More padding */
+    background-color: rgba(12, 12, 22, 0.7); 
+    padding: 18px; 
     border-radius: 3px;
     margin-bottom: 20px;
-    min-height: 150px; /* Taller text area */
-    border: 1px solid #2f2f45; /* Consistent border */
+    min-height: 150px; 
+    border: 1px solid #2f2f45; 
     flex-grow: 1;
     overflow-y: auto;
-    font-size: 1.05em; /* Slightly larger text in these views */
+    font-size: 1.05em; 
 }
 #location-actions, #storylet-choices {
     margin-top: 15px;
     display: flex;
     flex-direction: column;
-    gap: 12px; /* More space between buttons */
+    gap: 12px; 
     align-items: flex-start;
 }
 #location-actions button, #storylet-choices button {
@@ -354,7 +352,7 @@ button:disabled {
 }
 
 
-/* Encounter View Specifics (Copied from previous, largely okay) */
+/* Encounter View Specifics */
 #encounter-view { gap: 15px; }
 .encounter-columns { display: flex; gap: 15px; margin-bottom: 15px; }
 .encounter-aspect-info, .encounter-player-info {
@@ -391,34 +389,40 @@ button:disabled {
 
 /* --- Context Panel (Right) --- */
 #deck-info-display, #message-log-display, #journal-display {
-    background-color: rgba(24, 24, 40, 0.7); /* Slightly more opacity */
+    background-color: rgba(24, 24, 40, 0.7); 
     padding: 15px;
     border-radius: 3px;
     border: 1px solid #2f2f45;
 }
-#deck-info-display p { margin-bottom: 5px; } /* Tighter spacing for deck info */
+#deck-info-display p { margin-bottom: 5px; } 
 
 #log-entries, #journal-entries {
     max-height: 220px; overflow-y: auto; padding-right: 8px;
-    font-family: 'Consolas', 'Menlo', 'Courier New', monospace; /* Consistent monospace */
+    font-family: 'Consolas', 'Menlo', 'Courier New', monospace; 
     font-size: 0.9em;
 }
 .log-entry, .journal-entry { padding: 4px 2px; border-bottom: 1px dotted #3a3a5e; line-height: 1.5; }
 .log-entry:last-child, .journal-entry:last-child { border-bottom: none; }
 .log-entry.system { color: #70a0d0; }
+.log-entry.system_subtle { color: #6080b0; font-style: italic;}
+.log-entry.system_major_event { color: #80b0e0; font-weight: bold;}
+.log-entry.system_positive { color: #80d080; }
+.log-entry.system_positive_strong { color: #a0f0a0; font-weight: bold; }
+.log-entry.system_negative { color: #d08080; }
+.log-entry.system_warning { color: #e0c070; }
 .log-entry.story { color: #b090d0; }
 .log-entry.choice { color: #a0c0a0; }
 .log-entry.reward, .log-entry.reward_major { color: #d0d0a0; font-weight: bold; }
 .log-entry.reward_major { font-size: 1.05em; text-shadow: 0 0 3px #d0d0a0;}
-.log-entry.damage, .log-entry.trauma, .log-entry.critical, .log-entry.system_negative, .log-entry.critical_system { color: #e07070; }
-.log-entry.critical, .log-entry.critical_system { font-weight: bold; text-transform: uppercase; }
+.log-entry.damage, .log-entry.trauma, .log-entry.critical, .log-entry.critical_system, .log-entry.trauma_major { color: #e07070; }
+.log-entry.critical, .log-entry.critical_system, .log-entry.trauma_major { font-weight: bold; text-transform: uppercase; }
 .log-entry.error { color: #ff6060; font-weight: bold;}
-.log-entry.warning, .log-entry.system_warning { color: #ffd070;}
-.log-entry.system_positive, .log-entry.system_positive_strong { color: #80d080; }
-.log-entry.system_positive_strong { font-weight: bold; }
+.log-entry.warning { color: #ffd070;}
 .log-entry.turn { color: #9090b0; font-weight: bold; margin-top: 5px; border-top: 1px solid #3a3a5e; padding-top:5px; }
-.log-entry.player_action, .log-entry.player_action_major, .log-entry.player_action_good { color: #a0c0f0; }
+.log-entry.player_action, .log-entry.player_action_major, .log-entry.player_action_good, .log-entry.player_action_negative { color: #a0c0f0; }
 .log-entry.player_action_major { font-weight: bold;}
+.log-entry.player_action_negative { color: #f0a0a0; }
+.log-entry.player_action_good { color: #a0f0c0; }
 .log-entry.aspect_action, .log-entry.aspect_action_subtle, .log-entry.aspect_action_special { color: #f0a0c0; }
 .log-entry.aspect_action_special { font-style: italic; }
 .log-entry.combat { color: #c0c0c0; }
@@ -428,6 +432,8 @@ button:disabled {
 .log-entry.dialogue { color: #b8c8e8; }
 .log-entry.dialogue_important { color: #c8d8f8; font-weight:bold; }
 .log-entry.narrative { color: #b0b0b0; font-style: italic; }
+.log-entry.artifact_effect { color: #c0e0b0; font-style: italic;}
+.log-entry.tutorial_hint {color: #87CEEB; font-style: italic;}
 
 
 .journal-entry .entry-title { font-weight: bold; color: #b0a0e0; }
@@ -442,9 +448,9 @@ button:disabled {
 /* --- Modals --- */
 #modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(10, 10, 15, 0.88); /* Slightly more opaque */
+    background-color: rgba(10, 10, 15, 0.88); 
     display: flex; justify-content: center; align-items: center; z-index: 1000;
-    backdrop-filter: blur(4px); /* Stronger blur */
+    backdrop-filter: blur(4px); 
 }
 .modal-content {
     background-color: #1f1f35; padding: 25px; border-radius: 4px;
@@ -454,16 +460,16 @@ button:disabled {
 .modal-content h2 { text-align: center; margin-top: 0; color: #d0c0ff; }
 .close-modal-button { display: block; margin: 20px auto 0; }
 #full-deck-list li {
-    padding: 6px 10px; background-color: rgba(12, 12, 22, 0.8); /* More opaque list items */
+    padding: 6px 10px; background-color: rgba(12, 12, 22, 0.8); 
     margin-bottom: 6px; border-radius: 3px; font-size: 0.95em;
 }
 
 /* --- Tooltip --- */
 #tooltip {
-    position: absolute; background-color: rgba(5, 5, 10, 0.98); /* Almost fully opaque */
+    position: absolute; background-color: rgba(5, 5, 10, 0.98); 
     color: #d8d8f0; border: 1px solid #504070; border-radius: 3px;
-    padding: 10px 12px; /* Slightly more padding */ font-size: 0.9em; z-index: 1100;
-    max-width: 300px; /* Wider tooltips allowed */ pointer-events: none;
+    padding: 10px 12px; font-size: 0.9em; z-index: 1100;
+    max-width: 300px; pointer-events: none;
     box-shadow: 0 3px 8px rgba(0,0,0,0.5); line-height: 1.5;
 }
 #tooltip strong { color: #efefff; }
